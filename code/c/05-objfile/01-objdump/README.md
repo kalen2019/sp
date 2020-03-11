@@ -21,19 +21,19 @@ add(5, 8)=13
 add.s
 
 ```
-  .file  "add.c"
+  .file	"add.c"
   .text
-  .globl  _add
-  .def  _add;  .scl  2;  .type  32;  .endef
+  .globl	_add
+  .def	_add;	.scl	2;	.type	32;	.endef
 _add:
-  pushl  %ebp   #
-  movl  %esp, %ebp   #,
-  movl  8(%ebp), %edx   # a, tmp89
-  movl  12(%ebp), %eax   # b, tmp90
-  addl  %edx, %eax   # tmp89, D.1488
-  popl  %ebp   #
+  pushl	%ebp	 #
+  movl	%esp, %ebp	 #,
+  movl	8(%ebp), %edx	 # a, tmp89
+  movl	12(%ebp), %eax	 # b, tmp90
+  addl	%edx, %eax	 # tmp89, D.1488
+  popl	%ebp	 #
   ret
-  .ident  "GCC: (tdm-1) 5.1.0"
+  .ident	"GCC: (tdm-1) 5.1.0"
 ```
 
 ## 解說
@@ -41,20 +41,19 @@ _add:
 add.s
 
 ```
-  .file  "add.c"            // 原始碼是 add.c
+  .file	"add.c"             // 原始碼是 add.c
   .text                     // 程式段開始
-  .globl  _add              // _add 是個全域 Global 標記
-  .def  _add;  .scl  2;  .type  32;  .endef
-  // 32 位元，參考 https://stackoverflow.com/questions/1317081/gccs-assembly-output-of-an-empty-program-on-x86-win32
+  .globl	_add              // _add 是個全域 Global 標記
+  .def	_add;	.scl	2;	.type	32;	.endef // 32 位元，參考 https://stackoverflow.com/questions/1317081/gccs-assembly-output-of-an-empty-program-on-x86-win32
 _add:                       // _add 標記
-  pushl  %ebp   #           // 將 ebp 框架暫存器推入堆疊
-  movl  %esp, %ebp   #,     // ebp = esp, 新的框架位址 
-  movl  8(%ebp), %edx   # a, tmp89   // 將 a 放入 edx
-  movl  12(%ebp), %eax   # b, tmp90  // 將 b 放入 eax
-  addl  %edx, %eax   # tmp89, D.1488 // eax = a+b
-  popl  %ebp   #            // 恢復呼叫前的 ebp
+  pushl	%ebp	 #            // 將 ebp 框架暫存器推入堆疊
+  movl	%esp, %ebp	 #,     // ebp = esp, 新的框架位址 
+  movl	8(%ebp), %edx	 # a, tmp89 // 將 a 放入 edx
+  movl	12(%ebp), %eax	 # b, tmp90 // 將 b 放入 eax
+  addl	%edx, %eax	 # tmp89, D.1488 // eax = a+b
+  popl	%ebp	 #            // 恢復呼叫前的 ebp
   ret                       // 返回上一層
-  .ident  "GCC: (tdm-1) 5.1.0"
+  .ident	"GCC: (tdm-1) 5.1.0"
 ```
 
 * https://eli.thegreenplace.net/2011/02/04/where-the-top-of-the-stack-is-on-x86
@@ -82,34 +81,34 @@ popl    %eip
 ## 主程式解說
 
 ```
-  .file  "main.c"
-  .def  ___main;  .scl  2;  .type  32;  .endef
+  .file	"main.c"
+  .def	___main;	.scl	2;	.type	32;	.endef
   .section .rdata,"dr"
 LC0:
   .ascii "add(5, 8)=%d\12\0"
   .text
-  .globl  _main
-  .def  _main;  .scl  2;  .type  32;  .endef
+  .globl	_main
+  .def	_main;	.scl	2;	.type	32;	.endef
 _main:
-  pushl  %ebp   #
-  movl  %esp, %ebp   #,
-  andl  $-16, %esp   #,
-  subl  $32, %esp   #,              // 框架大小分配 32
-  call  ___main   #
-  movl  $8, 4(%esp)   #,            // 準備參數 b=8
-  movl  $5, (%esp)   #,             //         a=5
-  call  _add   #                    // 呼叫 add(a,b)
-  movl  %eax, 28(%esp)   # tmp89, t // t = eax
-  movl  28(%esp), %eax   # t, tmp90
-  movl  %eax, 4(%esp)   # tmp90,    // 將 t 放到堆疊
-  movl  $LC0, (%esp)   #,           // 將 LC0 放入堆疊
-  call  _printf   #                 // 呼叫 _printf
-  movl  $0, %eax   #, D.1933        // 設定傳回值 eax 為 0
+  pushl	%ebp	 #
+  movl	%esp, %ebp	 #,
+  andl	$-16, %esp	 #,
+  subl	$32, %esp	 #,               // 框架大小分配 32
+  call	___main	 #
+  movl	$8, 4(%esp)	 #,             // 準備參數 b=8
+  movl	$5, (%esp)	 #,             //         a=5
+  call	_add	 #                    // 呼叫 add(a,b)
+  movl	%eax, 28(%esp)	 # tmp89, t // t = eax
+  movl	28(%esp), %eax	 # t, tmp90
+  movl	%eax, 4(%esp)	 # tmp90,     // 將 t 放到堆疊
+  movl	$LC0, (%esp)	 #,           // 將 LC0 放入堆疊
+  call	_printf	 #                  // 呼叫 _printf
+  movl	$0, %eax	 #, D.1933        // 設定傳回值 eax 為 0
   leave                             // 準備離開，恢復框架
   ret
-  .ident  "GCC: (tdm-1) 5.1.0"
-  .def  _add;  .scl  2;  .type  32;  .endef
-  .def  _printf;  .scl  2;  .type  32;  .endef
+  .ident	"GCC: (tdm-1) 5.1.0"
+  .def	_add;	.scl	2;	.type	32;	.endef
+  .def	_printf;	.scl	2;	.type	32;	.endef
 ```
 
 說明: https://stackoverflow.com/questions/7060970/substitutes-for-x86-assembly-call-instruction

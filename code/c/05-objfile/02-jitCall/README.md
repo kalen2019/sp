@@ -1,5 +1,18 @@
 # JitCall
 
+## MinGW 32
+
+```
+PS D:\ccc\course\sp\code\c\03-asmVm\gcc\04-jitCall\win> gcc jitCall.c -o jitCall
+PS D:\ccc\course\sp\code\c\03-asmVm\gcc\04-jitCall\win> ./jitCall
+add(5, 8)=13
+sum(10)=55
+fib(10)=89
+```
+
+## 補充
+
+
 目前只有在 windows 32 bits 下才能成功，其他系統下會 core dump。
 
 例如在 MinGW64 下會出現下列 jitCall.exe.stackdump
