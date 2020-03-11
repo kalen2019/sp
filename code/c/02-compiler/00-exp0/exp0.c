@@ -14,22 +14,26 @@ void error(char *msg) {
   assert(0);
 }
 
+// 取得目前字元
 char ch() {
   char c = tokens[tokenIdx];
   return c;
 }
 
+// 取得目前字元，同時進到下一格
 char next() {
   char c = ch();
   tokenIdx++;
   return c;
 }
 
+// ex: isNext("+-") 用來判斷下一個字元是不是 + 或 -
 int isNext(char *set) {
   char c = ch();
   return (c!='\0' && strchr(set, c)!=NULL);
 }
 
+// 產生下一個臨時變數的代號， ex: 3 代表 t3。
 int nextTemp() {
   static int tempIdx = 0;
   return tempIdx++;
