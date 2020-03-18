@@ -11,7 +11,8 @@ char *typeName[5] = {"Id", "Int", "Keyword", "Literal", "Char"};
 
 char code[TMAX];
 char strTable[TMAX], *strTableEnd=strTable;
-char *tokens[TMAX], tokenTop=0;
+char *tokens[TMAX];
+int tokenTop=0;
 int types[TMAX];
 
 #define isDigit(ch) ((ch) >= '0' && (ch) <='9')
@@ -26,10 +27,15 @@ int readText(char *fileName, char *text, int size) {
   return len;
 }
 
+/* strTable =
+#\0include\0"sum.h"\0int\0main\0.....
+*/
 char *next(char *p) {
   while (isspace(*p)) p++;
 
-  char *start = p;
+  char *start = p; //         include "sum.h"
+                   //         ^      ^
+                   //  start= p      p
   int type;
   if (*p == '\0') return NULL;
   if (*p == '"') {

@@ -35,6 +35,7 @@ int nextTemp() {
   return tempIdx++;
 }
 
+// ex : t1=3
 void genOp1(int i, char c) {
   printf("# t%d=%c\n", i, c);
   // t1=3 轉成 @3; D=A; @t1; M=D
@@ -44,6 +45,7 @@ void genOp1(int i, char c) {
   printf("M=D\n");
 }
 
+// ex : t2 = t0+t1
 void genOp2(int i, int i1, char op, int i2) {
   printf("# t%d=t%d%ct%d\n", i, i1, op, i2);
   // t0=t1+t2 轉成 @t1; D=M; @t2; D=D+M; @t0; M=D;
