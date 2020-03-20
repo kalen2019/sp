@@ -68,7 +68,7 @@ PS D:\ccc\course\sp\code\c\03-asmVm\hack\c> ./asm ../test/Add
 ```
 
 
-## C 語言版 HackCPU 虛擬機的用法
+## HackCPU 虛擬機的用法
 
 
 ```
