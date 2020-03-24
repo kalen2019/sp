@@ -66,7 +66,7 @@ int run(uint16_t *im, int16_t *m) {
         case 0x7: PC = A; break;                  // JMP
       }
     }
-    printf(" A=%04X D=%04X m[A]=%04X", PC, A, D, m[A]);
+    printf(" A=%04X D=%04X m[A]=%04X", A, D, m[A]);
     if ((I & 0x8000) != 0) printf(" a=%X c=%02X d=%X j=%X", a, c, d, j);
     printf("\n");
   }

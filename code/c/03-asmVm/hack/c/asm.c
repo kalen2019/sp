@@ -139,17 +139,19 @@ void pass2(string inFile, string hackFile, string binFile) {
   FILE *fp = fopen(inFile, "r");
   FILE *hfp = fopen(hackFile, "w");
   FILE *bfp = fopen(binFile, "wb");
+  int address = 0;
   while (fgets(line, sizeof(line), fp)) {
     char *code = parse(line);
     if (strlen(code)==0) continue;
-    if (code[0] == '(') {
-      printf("%s\n", code);
+    if (line[0] == '(') {
+      printf("%s\n", line);
     } else {
       code2binary(code, binary);
       uint16_t b = c6btoi(binary);
-      printf("  %-20s %s %04x\n", code, binary, b);
+      printf("%02X: %-20s %s %04x\n", address, code, binary, b);
       fprintf(hfp, "%s\n", binary);
       fwrite(&b, sizeof(b), 1, bfp);
+      address ++;
     }
   }
   fclose(fp);
