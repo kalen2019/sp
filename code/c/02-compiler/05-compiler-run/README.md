@@ -1,5 +1,9 @@
 # Compiler
 
+main.c => lexer.c
+          compiler.c
+          ir.c       => irvm.c
+
 ```
 PS D:\ccc\course\sp\code\c\02-compiler\05-compiler-run> ./compiler test/sum.c -run
 ===================irRun()=======================

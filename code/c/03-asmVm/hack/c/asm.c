@@ -125,7 +125,7 @@ void pass1(string inFile) {
     if (code[0] == '(') {
       char label[100];
       sscanf(code, "(%[^)])", label);
-      symAdd(&symMap, label, address);
+      symAdd(&symMap, label, address); // 記住符號位址，給 pass2 編碼時使用
     } else {
       address ++;
     }
@@ -136,21 +136,21 @@ void pass1(string inFile) {
 void pass2(string inFile, string hackFile, string binFile) {
   printf("============= PASS2 ================\n");
   char line[100], binary[17];
-  FILE *fp = fopen(inFile, "r");
-  FILE *hfp = fopen(hackFile, "w");
-  FILE *bfp = fopen(binFile, "wb");
+  FILE *fp = fopen(inFile, "r"); // 開啟組合語言檔
+  FILE *hfp = fopen(hackFile, "w"); // 開啟輸出的 .hack 二進位字串檔案
+  FILE *bfp = fopen(binFile, "wb"); // 開啟輸出的 .bin 二進位檔
   int address = 0;
-  while (fgets(line, sizeof(line), fp)) {
-    char *code = parse(line);
+  while (fgets(line, sizeof(line), fp)) { // 一行一行讀
+    char *code = parse(line); // 取得該行的程式碼部分
     if (strlen(code)==0) continue;
-    if (line[0] == '(') {
-      printf("%s\n", line);
+    if (line[0] == '(') { // 這行是符號 ex: (LOOP)
+      printf("%s\n", line); // 印出該符號
     } else {
-      code2binary(code, binary);
-      uint16_t b = c6btoi(binary);
+      code2binary(code, binary); // 將指令編碼為二進位字串 string
+      uint16_t b = c6btoi(binary); // 將二進位字串 string 轉成 int16
       printf("%02X: %-20s %s %04x\n", address, code, binary, b);
-      fprintf(hfp, "%s\n", binary);
-      fwrite(&b, sizeof(b), 1, bfp);
+      fprintf(hfp, "%s\n", binary); // 輸出 .hack 的二進位字串檔
+      fwrite(&b, sizeof(b), 1, bfp); // 輸出 .bin 的二進位檔
       address ++;
     }
   }
