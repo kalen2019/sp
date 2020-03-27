@@ -5,6 +5,6 @@
 
 enum { Id, Int, Keyword, Literal, Char };
 
-extern int lex(char *text);
+extern void lex(char *text);
 
 #endif

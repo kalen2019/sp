@@ -1,5 +1,17 @@
 #include "compiler.h"
 
+int readText(char *fileName, char *text, int size);
+void dump(char *strTable[], int top);
+
+int main(int argc, char * argv[]) {
+  readText(argv[1], code, TMAX);
+  puts(code);
+  lex(code);
+  dump(tokens, tokenTop);
+  parse();
+  return 0;
+}
+
 int readText(char *fileName, char *text, int size) {
   FILE *file = fopen(fileName, "r");
   int len = fread(text, 1, size, file);
@@ -15,11 +27,3 @@ void dump(char *strTable[], int top) {
   }
 }
 
-int main(int argc, char * argv[]) {
-  readText(argv[1], code, TMAX);
-  puts(code);
-  lex(code);
-  dump(tokens, tokenTop);
-  parse();
-  irDump();
-}

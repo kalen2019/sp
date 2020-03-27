@@ -1,9 +1,12 @@
-#include "lexer.h"
+#include "compiler.h"
+
+#define TMAX 10000000
+#define LMAX 100
 
 char *typeName[5] = {"Id", "Int", "Keyword", "Literal", "Char"};
 char code[TMAX], *p;
 char strTable[TMAX], *strTableEnd=strTable;
-char *tokens[TMAX], tokenTop=0, tokenIdx=0, token[SMAX];
+char *tokens[TMAX], tokenTop=0, tokenIdx=0, token[LMAX];
 
 char *scan() {
   while (isspace(*p)) p++;
