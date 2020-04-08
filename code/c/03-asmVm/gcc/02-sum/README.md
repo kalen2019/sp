@@ -18,29 +18,29 @@ $ gcc -fverbose-asm -S sum.c -o sum.s
 sum.s
 
 ```
-	.file	"sum.c"
-	.text
-	.globl	_sum
-	.def	_sum;	.scl	2;	.type	32;	.endef
+    .file    "sum.c"
+    .text
+    .globl    _sum
+    .def    _sum;    .scl    2;    .type    32;    .endef
 _sum:
-	pushl	%ebp	 #
-	movl	%esp, %ebp	 #,
-	subl	$16, %esp	 #,
-	movl	$0, -4(%ebp)	 #, s
-	movl	$0, -8(%ebp)	 #, i
-	jmp	L2	 #
+    pushl    %ebp     #
+    movl    %esp, %ebp     #,
+    subl    $16, %esp     #,
+    movl    $0, -4(%ebp)     #, s
+    movl    $0, -8(%ebp)     #, i
+    jmp    L2     #
 L3:
-	movl	-8(%ebp), %eax	 # i, tmp89
-	addl	%eax, -4(%ebp)	 # tmp89, s
-	addl	$1, -8(%ebp)	 #, i
+    movl    -8(%ebp), %eax     # i, tmp89
+    addl    %eax, -4(%ebp)     # tmp89, s
+    addl    $1, -8(%ebp)     #, i
 L2:
-	movl	-8(%ebp), %eax	 # i, tmp90
-	cmpl	8(%ebp), %eax	 # n, tmp90
-	jle	L3	 #,
-	movl	-4(%ebp), %eax	 # s, D.1492
-	leave
-	ret
-	.ident	"GCC: (tdm-1) 5.1.0"
+    movl    -8(%ebp), %eax     # i, tmp90
+    cmpl    8(%ebp), %eax     # n, tmp90
+    jle    L3     #,
+    movl    -4(%ebp), %eax     # s, D.1492
+    leave
+    ret
+    .ident    "GCC: (tdm-1) 5.1.0"
 
 ```
 
@@ -49,29 +49,29 @@ L2:
 sum.s
 
 ```
-	.file	"sum.c"
-	.text         
-	.globl	_sum 
-	.def	_sum;	.scl	2;	.type	32;	.endef
+    .file    "sum.c"
+    .text         
+    .globl    _sum 
+    .def    _sum;    .scl    2;    .type    32;    .endef
 _sum:
-	pushl	%ebp	 #
-	movl	%esp, %ebp	 #,       
-	subl	$16, %esp	 #,          // esp = esp - 16 (框架大小)
-	movl	$0, -4(%ebp)	 #, s    // s = 0
-	movl	$0, -8(%ebp)	 #, i    // i = 0
-	jmp	L2	 #
+    pushl    %ebp     #
+    movl    %esp, %ebp     #,       
+    subl    $16, %esp     #,         // esp = esp - 16 (框架大小)
+    movl    $0, -4(%ebp)     #, s    // s = 0
+    movl    $0, -8(%ebp)     #, i    // i = 0
+    jmp     L2     #
 L3:
-	movl	-8(%ebp), %eax	 # i, tmp89   // eax = i
-	addl	%eax, -4(%ebp)	 # tmp89, s   // s = eax + s = i + s
-	addl	$1, -8(%ebp)	 #, i           // i = i + 1
+    movl    -8(%ebp), %eax     # i, tmp89   // eax = i
+    addl    %eax, -4(%ebp)     # tmp89, s   // s = eax + s = i + s
+    addl    $1, -8(%ebp)       #, i         // i = i + 1
 L2:
-	movl	-8(%ebp), %eax	 # i, tmp90   // eax = i
-	cmpl	8(%ebp), %eax	 # n, tmp90     // compare n, eax
-	jle	L3	 #,                         // if (n < eax) goto L3
-	movl	-4(%ebp), %eax	 # s, D.1492  // eax = s
-	leave                               // 準備離開，參考 https://c9x.me/x86/html/file_module_x86_id_154.html
-	ret                                 // 返回  LR = PC
-	.ident	"GCC: (tdm-1) 5.1.0"
+    movl    -8(%ebp), %eax     # i, tmp90   // eax = i
+    cmpl    8(%ebp), %eax      # n, tmp90   // compare n, eax
+    jle     L3     #,                       // if (n < eax) goto    L3
+    movl    -4(%ebp), %eax     # s, D.1492  // eax = s
+    leave                                   // 準備離開，參考 https://c9x.me/x86/html/file_module_x86_id_154.html
+    ret                                     // 返回  LR = PC
+    .ident    "GCC: (tdm-1) 5.1.0"
 
 ```
 
