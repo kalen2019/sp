@@ -95,9 +95,6 @@ exit program !
 ## sum.asm
 
 ```
-PS D:\ccc\course\sp\code\c\03-asmVm\hack\c> make
-gcc -std=c99 -O0 asm.c c6.c -o asm
-gcc -std=c99 -O0 vm.c -o vm
 PS D:\ccc\course\sp\code\c\03-asmVm\hack\c> ./asm ../test/sum   
 ======= SYMBOL TABLE ===========
 0: R0, 0
@@ -210,6 +207,11 @@ PS D:\ccc\course\sp\code\c\03-asmVm\hack\c> ./asm ../test/sum
 17: D=M                  1111110000010000 fc10
 18: @R1                  0000000000000001 0001
 19: M=D                  1110001100001000 e308
+```
+
+以下的 0037 就是 55, 也就是 1+2+....+10 的結果!
+
+```
 PS D:\ccc\course\sp\code\c\03-asmVm\hack\c> ./vm ../test/sum.bin
 PC=0000 I=000A A=000A D=0000 m[A]=0000
 PC=0001 I=EC10 A=000A D=000A m[A]=0000 a=0 c=30 d=2 j=0

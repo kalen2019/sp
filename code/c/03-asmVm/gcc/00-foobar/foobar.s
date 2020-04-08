@@ -1,11 +1,11 @@
-	.file	"add.c"
+	.file	"foobar.c"
  # GNU C11 (tdm-1) version 5.1.0 (mingw32)
  #	compiled by GNU C version 5.1.0, GMP version 4.3.2, MPFR version 2.4.2, MPC version 0.8.2
  # GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
  # options passed: 
  # -iprefix D:/install/CodeBlocksPortable/App/CodeBlocks/MinGW/bin/../lib/gcc/mingw32/5.1.0/
- # -D_REENTRANT add.c -mtune=generic -march=pentiumpro -auxbase-strip add.s
- # -fverbose-asm
+ # -D_REENTRANT foobar.c -mtune=generic -march=pentiumpro
+ # -auxbase-strip foobar.s -fverbose-asm
  # options enabled:  -faggressive-loop-optimizations
  # -fasynchronous-unwind-tables -fauto-inc-dec -fchkp-check-incomplete-type
  # -fchkp-check-read -fchkp-check-write -fchkp-instrument-calls
@@ -37,19 +37,48 @@
  # -mpush-args -msahf -mstack-arg-probe -mvzeroupper
 
 	.text
-	.globl	_add
-	.def	_add;	.scl	2;	.type	32;	.endef
-_add:
+	.globl	_foobar
+	.def	_foobar;	.scl	2;	.type	32;	.endef
+_foobar:
 	pushl	%ebp	 #
 	movl	%esp, %ebp	 #,
 	subl	$16, %esp	 #,
-	movl	8(%ebp), %eax	 # a, tmp89
-	movl	%eax, -4(%ebp)	 # tmp89, t
-	movl	12(%ebp), %eax	 # b, tmp90
-	movl	%eax, -8(%ebp)	 # tmp90, x
-	movl	8(%ebp), %edx	 # a, tmp91
-	movl	12(%ebp), %eax	 # b, tmp92
-	addl	%edx, %eax	 # tmp91, D.1490
+	movl	8(%ebp), %eax	 # a, tmp95
+	addl	$2, %eax	 #, tmp94
+	movl	%eax, -4(%ebp)	 # tmp94, xx
+	movl	12(%ebp), %eax	 # b, tmp99
+	addl	$3, %eax	 #, tmp98
+	movl	%eax, -8(%ebp)	 # tmp98, yy
+	movl	16(%ebp), %eax	 # c, tmp103
+	addl	$4, %eax	 #, tmp102
+	movl	%eax, -12(%ebp)	 # tmp102, zz
+	movl	-4(%ebp), %edx	 # xx, tmp104
+	movl	-8(%ebp), %eax	 # yy, tmp105
+	addl	%eax, %edx	 # tmp105, D.1501
+	movl	-12(%ebp), %eax	 # zz, tmp109
+	addl	%edx, %eax	 # D.1501, tmp108
+	movl	%eax, -16(%ebp)	 # tmp108, sum
+	movl	-4(%ebp), %eax	 # xx, tmp110
+	imull	-8(%ebp), %eax	 # yy, D.1501
+	imull	-12(%ebp), %eax	 # zz, D.1501
+	movl	%eax, %edx	 # D.1501, D.1501
+	movl	-16(%ebp), %eax	 # sum, tmp111
+	addl	%edx, %eax	 # D.1501, D.1501
+	leave
+	ret
+	.def	___main;	.scl	2;	.type	32;	.endef
+	.globl	_main
+	.def	_main;	.scl	2;	.type	32;	.endef
+_main:
+	pushl	%ebp	 #
+	movl	%esp, %ebp	 #,
+	andl	$-16, %esp	 #,
+	subl	$16, %esp	 #,
+	call	___main	 #
+	movl	$99, 8(%esp)	 #,
+	movl	$88, 4(%esp)	 #,
+	movl	$77, (%esp)	 #,
+	call	_foobar	 #
 	leave
 	ret
 	.ident	"GCC: (tdm-1) 5.1.0"
