@@ -49,11 +49,11 @@ _main:
     movl    %esp, %ebp     #,
     andl    $-16, %esp     #,
     subl    $16, %esp     #,
-    call    ___main     #
-    movl    $99, 8(%esp)     #, 把 99 傳給 c
-    movl    $88, 4(%esp)     #, 把 88 傳給 b
-    movl    $77, (%esp)     #,     把 77 傳給 a
-    call    _foobar     #  呼叫 foobar , (a=77,b=88,c=99)
+    call    ___main      #
+    movl    $99, 8(%esp) #, 把 99 傳給 c
+    movl    $88, 4(%esp) #, 把 88 傳給 b
+    movl    $77, (%esp)  #, 把 77 傳給 a
+    call    _foobar      #  呼叫 foobar (a=77,b=88,c=99)
     leave
     ret
     .ident    "GCC: (tdm-1) 5.1.0"
