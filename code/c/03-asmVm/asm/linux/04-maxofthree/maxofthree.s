@@ -17,4 +17,5 @@ maxofthree:
         cmovl   %rsi, %rax              # if so, set result to y
         cmp     %rdx, %rax              # is max(x,y) less than z?
         cmovl   %rdx, %rax              # if so, set result to z
-        ret                   
+        ret
+                   
