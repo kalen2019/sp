@@ -1,6 +1,6 @@
 CC := gcc
 CFLAGS = -std=c99 -O0
-TARGET = run.o
+TARGET = run
 
 all: $(TARGET)
 
