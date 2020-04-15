@@ -1,7 +1,7 @@
 CC := gcc
 AR := ar
 CFLAGS = -std=c99 -O0
-TARGET = run.o
+TARGET = run
 LIB = libstat.a
 
 all: $(TARGET)

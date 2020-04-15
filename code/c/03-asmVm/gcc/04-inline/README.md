@@ -7,6 +7,24 @@ $ ./inline
 sum = 30
 ```
 
+## 說明
+
+```c
+#include <stdio.h>
+#include <stdint.h>
+
+int main(int argc, char **argv)
+{
+    int32_t var1=10, var2=20, sum = 0;
+    asm volatile ("addl %%ebx,%%eax;"      /* eax = ebx + eax = 20 + 10 = 30 */
+                 : "=a" (sum)              /* output: sum = EAX = 30 */
+                 : "a" (var1), "b" (var2)  /* inputs: EAX = var1 = 10, EBX = var2 = 20 */
+    );
+    printf("sum = %d\n", sum);
+    return 0;
+}
+```
+
 ## 組合語言
 
 ```

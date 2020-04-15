@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-int a=5, b=8, c=1;
+int a=5, b=8, c; // =1;
 
 void add() {
    c = a + b;

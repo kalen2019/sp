@@ -1,28 +1,12 @@
-# Makefile
+# make 建置函式庫
 
 ```
-$@ : 該規則的目標文件 (Target file)
-$* : 代表 targets 所指定的檔案，但不包含副檔名
-$< : 依賴文件列表中的第一個依賴文件 (Dependencies file)
-$^ : 依賴文件列表中的所有依賴文件
-$? : 依賴文件列表中新於目標文件的文件列表
-$* : 代表 targets 所指定的檔案，但不包含副檔名
-
-?= 語法 : 若變數未定義，則替它指定新的值。
-:= 語法 : make 會將整個 Makefile 展開後，再決定變數的值。
-```
-
-## 範例 1 ：
+PS D:\ccc\sp\code\c\04-toolchain\gcc\05-makeLib> make   
+gcc -std=c99 -O0 -c sum.c -o sum.o
+ar -r libstat.a sum.o
+gcc -std=c99 -O0 -c main.c -o main.o
+gcc -std=c99 -O0 libstat.a main.o -L ./ -lstat -o run
+PS D:\ccc\sp\code\c\04-toolchain\gcc\05-makeLib> ./run  
+sum(10)=-45481793
 
 ```
-%.o: %.c
-    gcc -c $< -o $@
-
-$< : 屬於第一條件，也就是 foo.c
-$@ : 屬於目標條件，也就是 foo.o
-```
-
-## 範例 2 : https://github.com/jserv/mini-arm-os/blob/master/07-Threads/Makefile
-
-
-* [EricWang: makefile 心得、教學](https://wwssllabcd.github.io/blog/2016/10/03/how-to-write-make-file/)
