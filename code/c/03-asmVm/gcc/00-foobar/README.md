@@ -1,5 +1,9 @@
 # foobar.c
 
+```
+$ gcc -fverbose-asm -S fib.c -o fib.s
+```
+
 來源 -- https://eli.thegreenplace.net/2011/02/04/where-the-top-of-the-stack-is-on-x86
 
 ```

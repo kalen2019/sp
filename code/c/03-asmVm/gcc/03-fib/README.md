@@ -2,8 +2,52 @@
 
 ```
 $ cd .\03-fib\
-$ gcc -S fib.c -o fib.s
+$ gcc -fverbose-asm -S fib.c -o fib.s
 $ gcc -c fib.c -o fib.o
+$ gcc main.c fib.c -o fib
+$ ./fib
+fib(10)=89
+```
+
+## 組合語言
+
+```
+	.file	"fib.c"
+	.text
+	.globl	_fib
+	.def	_fib;	.scl	2;	.type	32;	.endef
+_fib:
+	pushl	%ebp	 #                  # 前置堆疊框架處理
+	movl	%esp, %ebp	 #,
+	pushl	%ebx	 #
+	subl	$20, %esp	 #,
+	cmpl	$1, 8(%ebp)	 #, n         # if n <=1
+	jg	L2	 #,
+	movl	$1, %eax	 #, D.1493      #    eax= 1  ... return
+	jmp	L3	 #
+L2:
+	movl	8(%ebp), %eax	 # n, tmp93 # eax = n
+	subl	$1, %eax	 #, D.1493      # eax = eax - 1
+	movl	%eax, (%esp)	 # D.1493,  # 推入參數 n-1
+	call	_fib	 #                  # 呼叫 fib(n-1)
+	movl	%eax, %ebx	 #, D.1493    # 取得傳回值放入 ebx
+	movl	8(%ebp), %eax	 # n, tmp94 # eax = n
+	subl	$2, %eax	 #, D.1493      # eax = eax - 2
+	movl	%eax, (%esp)	 # D.1493,  # 推入參數 n-2
+	call	_fib	 #                  # 呼叫 fib(n-2)
+	addl	%ebx, %eax	 # D.1493, D.1493 # eax = fib(n-1)+fib(n-2)
+L3:
+	addl	$20, %esp	 #,             # 堆疊後置段，恢復 ebp, esp 的值 
+	popl	%ebx	 #
+	popl	%ebp	 #
+	ret                             # return
+	.ident	"GCC: (tdm-1) 5.1.0"
+```
+
+## 機器碼
+
+```
+
 $ objdump -s fib.o
 
 fib.o:     file format pe-i386

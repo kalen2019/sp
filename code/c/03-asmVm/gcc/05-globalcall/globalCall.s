@@ -1,72 +1,87 @@
-	.section	__TEXT,__text,regular,pure_instructions
-	.macosx_version_min 10, 13
-	.globl	_add
-	.p2align	4, 0x90
-_add:                                   ## @add
-	.cfi_startproc
-## BB#0:
-	pushq	%rbp
-Lcfi0:
-	.cfi_def_cfa_offset 16
-Lcfi1:
-	.cfi_offset %rbp, -16
-	movq	%rsp, %rbp
-Lcfi2:
-	.cfi_def_cfa_register %rbp
-	movl	_a(%rip), %eax
-	addl	_b(%rip), %eax
-	movl	%eax, _c(%rip)
-	popq	%rbp
-	retq
-	.cfi_endproc
+	.file	"globalCall.c"
+ # GNU C11 (tdm-1) version 5.1.0 (mingw32)
+ #	compiled by GNU C version 5.1.0, GMP version 4.3.2, MPFR version 2.4.2, MPC version 0.8.2
+ # GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
+ # options passed: 
+ # -iprefix D:/install/CodeBlocksPortable/App/CodeBlocks/MinGW/bin/../lib/gcc/mingw32/5.1.0/
+ # -D_REENTRANT globalCall.c -mtune=generic -march=pentiumpro
+ # -auxbase-strip globalCall.s -fverbose-asm
+ # options enabled:  -faggressive-loop-optimizations
+ # -fasynchronous-unwind-tables -fauto-inc-dec -fchkp-check-incomplete-type
+ # -fchkp-check-read -fchkp-check-write -fchkp-instrument-calls
+ # -fchkp-narrow-bounds -fchkp-optimize -fchkp-store-bounds
+ # -fchkp-use-static-bounds -fchkp-use-static-const-bounds
+ # -fchkp-use-wrappers -fcommon -fdelete-null-pointer-checks
+ # -fdwarf2-cfi-asm -fearly-inlining -feliminate-unused-debug-types
+ # -ffunction-cse -fgcse-lm -fgnu-runtime -fgnu-unique -fident
+ # -finline-atomics -fira-hoist-pressure -fira-share-save-slots
+ # -fira-share-spill-slots -fivopts -fkeep-inline-dllexport
+ # -fkeep-static-consts -fleading-underscore -flifetime-dse
+ # -flto-odr-type-merging -fmath-errno -fmerge-debug-strings -fpeephole
+ # -fprefetch-loop-arrays -freg-struct-return
+ # -fsched-critical-path-heuristic -fsched-dep-count-heuristic
+ # -fsched-group-heuristic -fsched-interblock -fsched-last-insn-heuristic
+ # -fsched-rank-heuristic -fsched-spec -fsched-spec-insn-heuristic
+ # -fsched-stalled-insns-dep -fschedule-fusion -fsemantic-interposition
+ # -fset-stack-executable -fshow-column -fsigned-zeros
+ # -fsplit-ivs-in-unroller -fstdarg-opt -fstrict-volatile-bitfields
+ # -fsync-libcalls -ftrapping-math -ftree-coalesce-vars -ftree-cselim
+ # -ftree-forwprop -ftree-loop-if-convert -ftree-loop-im
+ # -ftree-loop-ivcanon -ftree-loop-optimize -ftree-parallelize-loops=
+ # -ftree-phiprop -ftree-reassoc -ftree-scev-cprop -funit-at-a-time
+ # -funwind-tables -fverbose-asm -fzero-initialized-in-bss -m32 -m80387
+ # -m96bit-long-double -maccumulate-outgoing-args -malign-double
+ # -malign-stringops -mavx256-split-unaligned-load
+ # -mavx256-split-unaligned-store -mfancy-math-387 -mfp-ret-in-387
+ # -mieee-fp -mlong-double-80 -mms-bitfields -mno-red-zone -mno-sse4
+ # -mpush-args -msahf -mstack-arg-probe -mvzeroupper
 
-	.globl	_main
-	.p2align	4, 0x90
-_main:                                  ## @main
-	.cfi_startproc
-## BB#0:
-	pushq	%rbp
-Lcfi3:
-	.cfi_def_cfa_offset 16
-Lcfi4:
-	.cfi_offset %rbp, -16
-	movq	%rsp, %rbp
-Lcfi5:
-	.cfi_def_cfa_register %rbp
-	subq	$16, %rsp
-	movl	$0, -4(%rbp)
-	callq	_add
-	leaq	L_.str(%rip), %rdi
-	movl	_c(%rip), %esi
-	movb	$0, %al
-	callq	_printf
-	xorl	%esi, %esi
-	movl	%eax, -8(%rbp)          ## 4-byte Spill
-	movl	%esi, %eax
-	addq	$16, %rsp
-	popq	%rbp
-	retq
-	.cfi_endproc
-
-	.section	__DATA,__data
-	.globl	_a                      ## @a
-	.p2align	2
+	.globl	_a
+	.data
+	.align 4
 _a:
-	.long	5                       ## 0x5
-
-	.globl	_b                      ## @b
-	.p2align	2
+	.long	5
+	.globl	_b
+	.align 4
 _b:
-	.long	8                       ## 0x8
-
-	.globl	_c                      ## @c
-	.p2align	2
+	.long	8
+	.globl	_c
+	.align 4
 _c:
-	.long	1                       ## 0x1
-
-	.section	__TEXT,__cstring,cstring_literals
-L_.str:                                 ## @.str
-	.asciz	"add(5, 8)=%d\n"
-
-
-.subsections_via_symbols
+	.long	1
+	.text
+	.globl	_add
+	.def	_add;	.scl	2;	.type	32;	.endef
+_add:
+	pushl	%ebp	 #
+	movl	%esp, %ebp	 #,
+	movl	_a, %edx	 # a, D.1939
+	movl	_b, %eax	 # b, D.1939
+	addl	%edx, %eax	 # D.1939, D.1939
+	movl	%eax, _c	 # D.1939, c
+	nop
+	popl	%ebp	 #
+	ret
+	.def	___main;	.scl	2;	.type	32;	.endef
+	.section .rdata,"dr"
+LC0:
+	.ascii "add(5, 8)=%d\12\0"
+	.text
+	.globl	_main
+	.def	_main;	.scl	2;	.type	32;	.endef
+_main:
+	pushl	%ebp	 #
+	movl	%esp, %ebp	 #,
+	andl	$-16, %esp	 #,
+	subl	$16, %esp	 #,
+	call	___main	 #
+	call	_add	 #
+	movl	_c, %eax	 # c, D.1940
+	movl	%eax, 4(%esp)	 # D.1940,
+	movl	$LC0, (%esp)	 #,
+	call	_printf	 #
+	movl	$0, %eax	 #, D.1940
+	leave
+	ret
+	.ident	"GCC: (tdm-1) 5.1.0"
+	.def	_printf;	.scl	2;	.type	32;	.endef
