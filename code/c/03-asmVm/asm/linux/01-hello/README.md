@@ -1,7 +1,4 @@
-# 
-
-
-
+# hello.s
 
 ```
 $ gcc -c hello.s
