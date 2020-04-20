@@ -1,11 +1,10 @@
 # Assembly Language
 
-組譯器 -- gas
 來源 -- https://cs.lmu.edu/~ray/notes/gasexamples/
 
 這些範例只能在 Linux 上跑
 
-要連上 linux ，請先安裝 putty
+在 windows 上要連 linux ，請先安裝 putty (mac 用 ssh)
 
 * https://www.putty.org/
 
@@ -26,3 +25,10 @@ $ ld hello.o -o hello
 $ ./hello
 Hello, world
 ```
+
+## 參考
+
+
+* https://cs.lmu.edu/~ray/notes/x86assembly/
+* http://www.egr.unlv.edu/~ed/assembly64.pdf
+* https://github.com/Apress/beginning-x64-assembly-programming

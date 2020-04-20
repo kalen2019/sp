@@ -1,7 +1,7 @@
 # hola.s
 
 ```
-$ gcc -no-pie hola.o -o hola
+$ gcc -no-pie hola.s -o hola
 $ ./hola
 Hola, mundo
 ```
