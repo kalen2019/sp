@@ -413,7 +413,8 @@ int32_t isassign()
         int32_t i = tok.pos + 2, t = 1;
         while (t) {
             val = tok.tok[i].val;
-            if (!strcmp(val, "[")) t++; if (!strcmp(val, "]")) t--;
+            if (!strcmp(val, "[")) t++; 
+	    if (!strcmp(val, "]")) t--;
             if (!strcmp(val, ";"))
                 error("%d: invalid expression", tok.tok[tok.pos].nline);
             i++;
