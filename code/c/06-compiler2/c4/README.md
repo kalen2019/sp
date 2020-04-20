@@ -6,6 +6,7 @@ C in four functions
 作者 -- https://github.com/rswier/
 來源 -- https://github.com/rswier/c4
 
+* [原理說明](doc)
 
 ## 使用方式
 
