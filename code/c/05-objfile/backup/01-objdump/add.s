@@ -3,7 +3,7 @@
  #	compiled by GNU C version 5.1.0, GMP version 4.3.2, MPFR version 2.4.2, MPC version 0.8.2
  # GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
  # options passed: 
- # -iprefix D:/install/CodeBlocksPortable/App/CodeBlocks/MinGW/bin/../lib/gcc/mingw32/5.1.0/
+ # -iprefix C:/Program Files (x86)/CodeBlocks/MinGW/bin/../lib/gcc/mingw32/5.1.0/
  # -D_REENTRANT add.c -mtune=generic -march=pentiumpro -auxbase-strip add.s
  # -fverbose-asm
  # options enabled:  -faggressive-loop-optimizations

@@ -1,11 +1,11 @@
-	.file	"add.c"
+	.file	"main.c"
  # GNU C11 (tdm-1) version 5.1.0 (mingw32)
  #	compiled by GNU C version 5.1.0, GMP version 4.3.2, MPFR version 2.4.2, MPC version 0.8.2
  # GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
  # options passed: 
- # -iprefix D:/install/CodeBlocksPortable/App/CodeBlocks/MinGW/bin/../lib/gcc/mingw32/5.1.0/
- # -D_REENTRANT add.c -mtune=generic -march=pentiumpro -auxbase-strip add.s
- # -fverbose-asm
+ # -iprefix C:/Program Files (x86)/CodeBlocks/MinGW/bin/../lib/gcc/mingw32/5.1.0/
+ # -D_REENTRANT main.c -mtune=generic -march=pentiumpro
+ # -auxbase-strip main.s -fverbose-asm
  # options enabled:  -faggressive-loop-optimizations
  # -fasynchronous-unwind-tables -fauto-inc-dec -fchkp-check-incomplete-type
  # -fchkp-check-read -fchkp-check-write -fchkp-instrument-calls
@@ -36,20 +36,30 @@
  # -mieee-fp -mlong-double-80 -mms-bitfields -mno-red-zone -mno-sse4
  # -mpush-args -msahf -mstack-arg-probe -mvzeroupper
 
+	.def	___main;	.scl	2;	.type	32;	.endef
+	.section .rdata,"dr"
+LC0:
+	.ascii "add(5, 8)=%d\12\0"
 	.text
-	.globl	_add
-	.def	_add;	.scl	2;	.type	32;	.endef
-_add:
+	.globl	_main
+	.def	_main;	.scl	2;	.type	32;	.endef
+_main:
 	pushl	%ebp	 #
 	movl	%esp, %ebp	 #,
-	subl	$16, %esp	 #,
-	movl	8(%ebp), %eax	 # a, tmp89
-	movl	%eax, -4(%ebp)	 # tmp89, t
-	movl	12(%ebp), %eax	 # b, tmp90
-	movl	%eax, -8(%ebp)	 # tmp90, x
-	movl	8(%ebp), %edx	 # a, tmp91
-	movl	12(%ebp), %eax	 # b, tmp92
-	addl	%edx, %eax	 # tmp91, D.1490
+	andl	$-16, %esp	 #,
+	subl	$32, %esp	 #,
+	call	___main	 #
+	movl	$8, 4(%esp)	 #,
+	movl	$5, (%esp)	 #,
+	call	_add	 #
+	movl	%eax, 28(%esp)	 # tmp89, t
+	movl	28(%esp), %eax	 # t, tmp90
+	movl	%eax, 4(%esp)	 # tmp90,
+	movl	$LC0, (%esp)	 #,
+	call	_printf	 #
+	movl	$0, %eax	 #, D.1933
 	leave
 	ret
 	.ident	"GCC: (tdm-1) 5.1.0"
+	.def	_add;	.scl	2;	.type	32;	.endef
+	.def	_printf;	.scl	2;	.type	32;	.endef
