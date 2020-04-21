@@ -8,8 +8,7 @@ int mystrcpy1(char *source, char *target) {
 }
 
 int mystrcpy2(char *source, char *target) {
-  int i = 0;
-  while (source[i] != '\0') {
+  for (int i=0; i<strlen(source); i++) {
     target[i] = source[i];
   }
 }

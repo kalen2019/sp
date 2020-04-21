@@ -5,7 +5,7 @@
  # options passed: 
  # -iprefix C:/Program Files (x86)/CodeBlocks/MinGW/bin/../lib/gcc/mingw32/5.1.0/
  # -D_REENTRANT mystrcpy1.c -mtune=generic -march=pentiumpro
- # -auxbase-strip mystrcpy1.s -O3 -fverbose-asm
+ # -auxbase-strip mystrcpy1_O3.s -O3 -fverbose-asm
  # options enabled:  -faggressive-loop-optimizations -falign-labels
  # -fasynchronous-unwind-tables -fauto-inc-dec -fbranch-count-reg
  # -fcaller-saves -fchkp-check-incomplete-type -fchkp-check-read
@@ -77,46 +77,46 @@ _mystrcpy1:
 	call	_strlen	 #
 	testl	%eax, %eax	 # tmp130
 	jle	L8	 #,
-	leal	4(%ebx), %edx	 #, D.1837
-	cmpl	%edx, %esi	 # D.1837, target
-	leal	4(%esi), %edx	 #, D.1837
-	setnb	%cl	 #, D.1840
-	cmpl	%edx, %ebx	 # D.1837, source
-	setnb	%dl	 #, D.1840
-	orl	%ecx, %edx	 # D.1840, D.1840
-	movl	%ebx, %ecx	 # source, D.1835
-	orl	%esi, %ecx	 # target, D.1835
-	andl	$3, %ecx	 #, D.1835
-	sete	%cl	 #, D.1840
-	testb	%cl, %dl	 # D.1840, D.1840
+	leal	4(%ebx), %edx	 #, D.1839
+	cmpl	%edx, %esi	 # D.1839, target
+	leal	4(%esi), %edx	 #, D.1839
+	setnb	%cl	 #, D.1842
+	cmpl	%edx, %ebx	 # D.1839, source
+	setnb	%dl	 #, D.1842
+	orl	%ecx, %edx	 # D.1842, D.1842
+	movl	%ebx, %ecx	 # source, D.1837
+	orl	%esi, %ecx	 # target, D.1837
+	andl	$3, %ecx	 #, D.1837
+	sete	%cl	 #, D.1842
+	testb	%cl, %dl	 # D.1842, D.1842
 	je	L10	 #,
 	cmpl	$9, %eax	 #, tmp130
 	jbe	L10	 #,
-	leal	-4(%eax), %ecx	 #, D.1839
-	xorl	%edx, %edx	 # D.1839
-	shrl	$2, %ecx	 #, D.1839
-	addl	$1, %ecx	 #, bnd.9
-	leal	0(,%ecx,4), %edi	 #, ratio_mult_vf.10
+	leal	-4(%eax), %ecx	 #, D.1841
+	xorl	%edx, %edx	 # D.1841
+	shrl	$2, %ecx	 #, D.1841
+	addl	$1, %ecx	 #, bnd.10
+	leal	0(,%ecx,4), %edi	 #, ratio_mult_vf.11
 L4:
 	movl	(%ebx,%edx,4), %ebp	 # MEM[base: source_4(D), index: _12, step: 4, offset: 0B], tmp149
 	movl	%ebp, (%esi,%edx,4)	 # tmp149, MEM[base: target_8(D), index: _12, step: 4, offset: 0B]
-	addl	$1, %edx	 #, D.1839
-	cmpl	%edx, %ecx	 # D.1839, bnd.9
+	addl	$1, %edx	 #, D.1841
+	cmpl	%edx, %ecx	 # D.1841, bnd.10
 	ja	L4	 #,
-	cmpl	%edi, %eax	 # ratio_mult_vf.10, tmp130
+	cmpl	%edi, %eax	 # ratio_mult_vf.11, tmp130
 	je	L8	 #,
-	movzbl	(%ebx,%ecx,4), %edx	 # *_7, D.1838
-	movb	%dl, (%esi,%ecx,4)	 # D.1838, *_16
+	movzbl	(%ebx,%ecx,4), %edx	 # *_7, D.1840
+	movb	%dl, (%esi,%ecx,4)	 # D.1840, *_16
 	leal	1(%edi), %edx	 #, i
 	cmpl	%edx, %eax	 # i, tmp130
 	jle	L8	 #,
-	movzbl	1(%ebx,%edi), %edx	 # *_72, D.1838
-	movb	%dl, 1(%esi,%edi)	 # D.1838, *_71
+	movzbl	1(%ebx,%edi), %edx	 # *_72, D.1840
+	movb	%dl, 1(%esi,%edi)	 # D.1840, *_71
 	leal	2(%edi), %edx	 #, i
 	cmpl	%edx, %eax	 # i, tmp130
 	jle	L8	 #,
-	movzbl	2(%ebx,%edi), %eax	 # *_49, D.1838
-	movb	%al, 2(%esi,%edi)	 # D.1838, *_48
+	movzbl	2(%ebx,%edi), %eax	 # *_49, D.1840
+	movb	%al, 2(%esi,%edi)	 # D.1840, *_48
 L8:
 	addl	$28, %esp	 #,
 	xorl	%eax, %eax	 #
@@ -130,8 +130,8 @@ L10:
 	xorl	%edx, %edx	 # i
 	.p2align 4,,10
 L3:
-	movzbl	(%ebx,%edx), %ecx	 # MEM[base: source_4(D), index: _59, offset: 0B], D.1838
-	movb	%cl, (%esi,%edx)	 # D.1838, MEM[base: target_8(D), index: _59, offset: 0B]
+	movzbl	(%ebx,%edx), %ecx	 # MEM[base: source_4(D), index: _59, offset: 0B], D.1840
+	movb	%cl, (%esi,%edx)	 # D.1840, MEM[base: target_8(D), index: _59, offset: 0B]
 	addl	$1, %edx	 #, i
 	cmpl	%edx, %eax	 # i, tmp130
 	jne	L3	 #,
@@ -154,19 +154,28 @@ LHOTB1:
 	.globl	_mystrcpy2
 	.def	_mystrcpy2;	.scl	2;	.type	32;	.endef
 _mystrcpy2:
-	movl	4(%esp), %edx	 # source, source
-	movl	8(%esp), %ecx	 # target, target
-	movzbl	(%edx), %eax	 # *source_3(D), D.1844
-	testb	%al, %al	 # D.1844
-	je	L27	 #,
+	pushl	%edi	 #
+	pushl	%esi	 #
+	pushl	%ebx	 #
+	xorl	%ebx, %ebx	 # i
+	subl	$16, %esp	 #,
+	movl	32(%esp), %esi	 # source, source
+	movl	36(%esp), %edi	 # target, target
+	jmp	L25	 #
 	.p2align 4,,10
-L28:
-	movb	%al, (%ecx)	 # D.1844, *target_5(D)
-	movzbl	(%edx), %eax	 # *source_3(D), D.1844
-	testb	%al, %al	 # D.1844
-	jne	L28	 #,
-L27:
-	xorl	%eax, %eax	 # <retval>
+L26:
+	movzbl	(%esi,%ebx), %eax	 # MEM[base: source_4(D), index: _6, offset: 0B], D.1855
+	movb	%al, (%edi,%ebx)	 # D.1855, MEM[base: target_7(D), index: _6, offset: 0B]
+	addl	$1, %ebx	 #, i
+L25:
+	movl	%esi, (%esp)	 # source,
+	call	_strlen	 #
+	cmpl	%ebx, %eax	 # i, tmp95
+	ja	L26	 #,
+	addl	$16, %esp	 #,
+	popl	%ebx	 #
+	popl	%esi	 #
+	popl	%edi	 #
 	ret
 	.section	.text.unlikely,"x"
 LCOLDE1:
