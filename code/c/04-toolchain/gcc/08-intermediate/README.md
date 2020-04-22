@@ -1,5 +1,7 @@
 # Gcc 中間碼
 
+* 參考 -- https://gcc.gnu.org/onlinedocs/gcc-4.3.4/gccint/GIMPLE-Example.html
+
 ## Gimple
 
 ```
