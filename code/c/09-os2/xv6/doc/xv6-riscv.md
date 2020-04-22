@@ -1,7 +1,9 @@
 # xv6 - RISCV 
 
 
-## 安裝
+
+
+## 安裝 -- 失敗
 
 ```
 root@localhost:/home/guest/spMore# sudo apt-get install git build-essential gdb-multiarch qemu-system-misc gcc-riscv64-linux-gnu binutils-riscv64-linux-gnu
@@ -134,5 +136,28 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 root@localhost:/home/guest/spMore# qemu-system-riscv64 --version
 qemu-system-riscv64: command not found
+
+```
+
+
+```
+root@localhost:~/ccc# qemu-system-riscv64 --version
+QEMU emulator version 4.1.0
+Copyright (c) 2003-2019 Fabrice Bellard and the QEMU Project developers
+root@localhost:~/ccc# git clone https://github.com/mit-pdos/xv6-riscv.git
+Cloning into 'xv6-riscv'...
+remote: Enumerating objects: 6314, done.
+remote: Total 6314 (delta 0), reused 0 (delta 0), pack-reused 6314
+Receiving objects: 100% (6314/6314), 15.63 MiB | 9.25 MiB/s, done.
+Resolving deltas: 100% (3207/3207), done.
+root@localhost:~/ccc# cd xv6-riscv/
+root@localhost:~/ccc/xv6-riscv# ls
+doc  kernel  LICENSE  Makefile  mkfs  README  user
+root@localhost:~/ccc/xv6-riscv# make qemu
+riscv64-unknown-elf-gcc    -c -o kernel/entry.o kernel/entry.S
+riscv64-unknown-elf-gcc -Wall -Werror -O -fno-omit-frame-pointer -ggdb -MD -mcmodel=medany -ffreestanding -fno-common -nostdlib -mno-relax -I. -fno-stack-protector -fno-pie -no-pie   -c -o kernel/start.o kernel/start.c
+riscv64-unknown-elf-gcc: error: unrecognized command line option '-mno-relax'; did you mean '-Wno-vla'?
+<builtin>: recipe for target 'kernel/start.o' failed
+make: *** [kernel/start.o] Error 1
 
 ```
