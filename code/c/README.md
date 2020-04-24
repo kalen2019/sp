@@ -1,8 +1,13 @@
-# C 語言範例
+# 系統程式課程範例 (以 C 語言為主的版本)
 
-這些程式使用 gcc + 類 UNIX 環境 (POSIX)，可以在 Linux, Mac 編譯執行，但要在 windows 底下執行，必須安裝 MSYS2
+這些程式使用 gcc + 類 UNIX 環境 (POSIX)，可以在 Linux, Mac 編譯執行
 
+但要在 windows 底下執行，必須安裝 CodeBlocks 或 MSYS2
+
+* http://www.codeblocks.org/
 * http://www.msys2.org/
 
-或者直接用虛擬機 VirtualBox, VMWare 裝一個 Linux 起來！
+安裝 CodeBlocks 之後必須要設定 gcc.exe 資料夾的路徑到系統 PATH 當中。
+
+在 windows 中也可以直接用虛擬機 VirtualBox, VMWare 裝一個 Linux 起來！
 
