@@ -8,6 +8,7 @@ gcc 參數 -- https://blog.csdn.net/qq_31108501/article/details/51842166
 * -O3 最高優化
 
 文章
+* [你所不知道的 C 語言：編譯器和最佳化原理篇](https://hackmd.io/@sysprog/c-prog/%2Fs%2FHy72937Me)
 * https://www.cs.cmu.edu/~15745/handouts.html
 * http://hackga.com/search/tag/compiler
 

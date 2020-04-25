@@ -11,3 +11,8 @@
 
 在 windows 中也可以直接用虛擬機 VirtualBox, VMWare 裝一個 Linux 起來！
 
+## 參考文獻
+
+* [你所不知道的 C 語言](https://hackmd.io/@sysprog/c-prog)
+* [Computer Science from the Bottom Up](https://www.bottomupcs.com/)
+* [C 语言编程透视](https://tinylab.gitbooks.io/cbook/)

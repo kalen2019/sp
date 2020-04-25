@@ -2,6 +2,8 @@
 
 ## HTTP Server
 
+* [高效能 Web 伺服器開發](https://hackmd.io/@sysprog/fast-web-server) (jserv)
+* https://github.com/guangqianpeng/fancy
 * https://github.com/larryhe/tinyhttpd (強)
 * https://github.com/LambdaSchool/C-Web-Server/tree/master/src
 * https://www.jmarshall.com/easy/http/
