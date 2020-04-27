@@ -24,14 +24,14 @@ bootmain(void)
 
   elf = (struct elfhdr*)0x10000;  // scratch space
 
-  // Read 1st page off disk
+  // Read 1st page off disk, (讀取 ELF　表頭 elfhdr) 
   readseg((uchar*)elf, 4096, 0);
 
-  // Is this an ELF executable?
+  // Is this an ELF executable? (如果確定是 ELF 檔案)
   if(elf->magic != ELF_MAGIC)
     return;  // let bootasm.S handle error
 
-  // Load each program segment (ignores ph flags).
+  // Load each program segment (ignores ph flags). (載入程式段)
   ph = (struct proghdr*)((uchar*)elf + elf->phoff);
   eph = ph + elf->phnum;
   for(; ph < eph; ph++){
@@ -41,7 +41,7 @@ bootmain(void)
       stosb(pa + ph->filesz, 0, ph->memsz - ph->filesz);
   }
 
-  // Call the entry point from the ELF header.
+  // Call the entry point from the ELF header. (執行 ELF 入口點)
   // Does not return!
   entry = (void(*)(void))(elf->entry);
   entry();

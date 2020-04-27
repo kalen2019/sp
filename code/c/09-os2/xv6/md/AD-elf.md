@@ -1,3 +1,58 @@
+
+## ELF 定義
+
+> [elf.h]
+
+```c
+// Format of an ELF executable file
+
+#define ELF_MAGIC 0x464C457FU  // "\x7FELF" in little endian
+
+// File header
+struct elfhdr {
+  uint magic;  // must equal ELF_MAGIC
+  uchar elf[12];
+  ushort type;
+  ushort machine;
+  uint version;
+  uint entry;
+  uint phoff;
+  uint shoff;
+  uint flags;
+  ushort ehsize;
+  ushort phentsize;
+  ushort phnum;
+  ushort shentsize;
+  ushort shnum;
+  ushort shstrndx;
+};
+
+// Program section header
+struct proghdr {
+  uint type;
+  uint off;
+  uint vaddr;
+  uint paddr;
+  uint filesz;
+  uint memsz;
+  uint flags;
+  uint align;
+};
+
+// Values for Proghdr type
+#define ELF_PROG_LOAD           1
+
+// Flag bits for Proghdr flags
+#define ELF_PROG_FLAG_EXEC      1
+#define ELF_PROG_FLAG_WRITE     2
+#define ELF_PROG_FLAG_READ      4
+```
+
+## ELF 使用
+
+> [exec.c]
+
+```c
 #include "types.h"
 #include "param.h"
 #include "memlayout.h"
@@ -38,7 +93,7 @@ exec(char *path, char **argv)
   if((pgdir = setupkvm()) == 0)
     goto bad;
 
-  // Load program into memory.
+  // Load program into memory. (載入 ELF 的程式段到記憶體)
   sz = 0;
   for(i=0, off=elf.phoff; i<elf.phnum; i++, off+=sizeof(ph)){
     if(readi(ip, (char*)&ph, off, sizeof(ph)) != sizeof(ph))
@@ -112,3 +167,41 @@ exec(char *path, char **argv)
   }
   return -1;
 }
+```
+
+> [bootmain.c]
+
+```c
+void
+bootmain(void)
+{
+  struct elfhdr *elf;
+  struct proghdr *ph, *eph;
+  void (*entry)(void);
+  uchar* pa;
+
+  elf = (struct elfhdr*)0x10000;  // scratch space
+
+  // Read 1st page off disk, 讀取 ELF　表頭 (elfhdr) 
+  readseg((uchar*)elf, 4096, 0);
+
+  // Is this an ELF executable?
+  if(elf->magic != ELF_MAGIC)
+    return;  // let bootasm.S handle error
+
+  // Load each program segment (ignores ph flags).
+  ph = (struct proghdr*)((uchar*)elf + elf->phoff);
+  eph = ph + elf->phnum;
+  for(; ph < eph; ph++){
+    pa = (uchar*)ph->paddr;
+    readseg(pa, ph->filesz, ph->off);
+    if(ph->memsz > ph->filesz)
+      stosb(pa + ph->filesz, 0, ph->memsz - ph->filesz);
+  }
+
+  // Call the entry point from the ELF header.
+  // Does not return!
+  entry = (void(*)(void))(elf->entry);
+  entry();
+}
+```
