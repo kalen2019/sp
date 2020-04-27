@@ -1,6 +1,6 @@
 // Boot loader.
-//
-// Part of the boot block, along with bootasm.S, which calls bootmain().
+// 
+// Part of the boot sector, along with bootasm.S, which calls bootmain().
 // bootasm.S has put the processor into protected 32-bit mode.
 // bootmain() loads an ELF kernel image from the disk starting at
 // sector 1 and then jumps to the kernel entry routine.
@@ -24,14 +24,14 @@ bootmain(void)
 
   elf = (struct elfhdr*)0x10000;  // scratch space
 
-  // Read 1st page off disk, (讀取 ELF　表頭 elfhdr) 
+  // Read 1st page off disk
   readseg((uchar*)elf, 4096, 0);
 
-  // Is this an ELF executable? (如果確定是 ELF 檔案)
+  // Is this an ELF executable?
   if(elf->magic != ELF_MAGIC)
     return;  // let bootasm.S handle error
 
-  // Load each program segment (ignores ph flags). (載入程式段)
+  // Load each program segment (ignores ph flags).
   ph = (struct proghdr*)((uchar*)elf + elf->phoff);
   eph = ph + elf->phnum;
   for(; ph < eph; ph++){
@@ -41,7 +41,7 @@ bootmain(void)
       stosb(pa + ph->filesz, 0, ph->memsz - ph->filesz);
   }
 
-  // Call the entry point from the ELF header. (執行 ELF 入口點)
+  // Call the entry point from the ELF header.
   // Does not return!
   entry = (void(*)(void))(elf->entry);
   entry();

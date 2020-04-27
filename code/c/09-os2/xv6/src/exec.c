@@ -17,20 +17,14 @@ exec(char *path, char **argv)
   struct inode *ip;
   struct proghdr ph;
   pde_t *pgdir, *oldpgdir;
-  struct proc *curproc = myproc();
 
-  begin_op();
-
-  if((ip = namei(path)) == 0){
-    end_op();
-    cprintf("exec: fail\n");
+  if((ip = namei(path)) == 0)
     return -1;
-  }
   ilock(ip);
   pgdir = 0;
 
-  // Check ELF header (檢查是否為 ELF 檔案)
-  if(readi(ip, (char*)&elf, 0, sizeof(elf)) != sizeof(elf))
+  // Check ELF header
+  if(readi(ip, (char*)&elf, 0, sizeof(elf)) < sizeof(elf))
     goto bad;
   if(elf.magic != ELF_MAGIC)
     goto bad;
@@ -38,7 +32,7 @@ exec(char *path, char **argv)
   if((pgdir = setupkvm()) == 0)
     goto bad;
 
-  // Load program into memory.  (載入 ELF 的程式段到記憶體)
+  // Load program into memory.
   sz = 0;
   for(i=0, off=elf.phoff; i<elf.phnum; i++, off+=sizeof(ph)){
     if(readi(ip, (char*)&ph, off, sizeof(ph)) != sizeof(ph))
@@ -47,17 +41,12 @@ exec(char *path, char **argv)
       continue;
     if(ph.memsz < ph.filesz)
       goto bad;
-    if(ph.vaddr + ph.memsz < ph.vaddr)
-      goto bad;
     if((sz = allocuvm(pgdir, sz, ph.vaddr + ph.memsz)) == 0)
-      goto bad;
-    if(ph.vaddr % PGSIZE != 0)
       goto bad;
     if(loaduvm(pgdir, (char*)ph.vaddr, ip, ph.off, ph.filesz) < 0)
       goto bad;
   }
   iunlockput(ip);
-  end_op();
   ip = 0;
 
   // Allocate two pages at the next page boundary.
@@ -91,24 +80,22 @@ exec(char *path, char **argv)
   for(last=s=path; *s; s++)
     if(*s == '/')
       last = s+1;
-  safestrcpy(curproc->name, last, sizeof(curproc->name));
+  safestrcpy(proc->name, last, sizeof(proc->name));
 
   // Commit to the user image.
-  oldpgdir = curproc->pgdir;
-  curproc->pgdir = pgdir;
-  curproc->sz = sz;
-  curproc->tf->eip = elf.entry;  // main
-  curproc->tf->esp = sp;
-  switchuvm(curproc);
+  oldpgdir = proc->pgdir;
+  proc->pgdir = pgdir;
+  proc->sz = sz;
+  proc->tf->eip = elf.entry;  // main
+  proc->tf->esp = sp;
+  switchuvm(proc);
   freevm(oldpgdir);
   return 0;
 
  bad:
   if(pgdir)
     freevm(pgdir);
-  if(ip){
+  if(ip)
     iunlockput(ip);
-    end_op();
-  }
   return -1;
 }
