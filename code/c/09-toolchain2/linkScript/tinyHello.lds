@@ -2,7 +2,16 @@ ENTRY(mymain)
 
 SECTIONS
 {
-    .= 0x08048000+SIZEOF_HEADERS;
-    tinytext: { *(.text) *(.data) *(.rodata) }
-    /DISCARD/: { *(.comment) }
+    . = 0x08048000 + SIZEOF_HEADERS;
+    tinytext : 
+    {
+       *(.text)
+       *(.data)
+       *(.rodata)
+    }
+    /DISCARD/ : 
+    {
+       *(.comment)
+    }
 }
+
