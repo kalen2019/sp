@@ -11,6 +11,8 @@
 
 ## 參考文獻
 
+* [QEMU, a Fast and Portable Dynamic Translator (PDF)](http://archives.cse.iitd.ernet.in/~sbansal/csl862-virt/2010/readings/bellard.pdf) -- Fabrice Bellard
+* [跨平台虛擬機 - QEMU](http://sp1.wikidot.com/qemu) -- 陳鍾誠。
 * [QEMU-IMG入门教程](https://blog.gavinzh.com/2017/08/02/qemu-img-tutorial-commands/)
 * [使用qemu安装虚拟机](https://blog.csdn.net/RichardYSteven/article/details/54645328) (讚!)
 * [QEMU (正體中文)](https://wiki.archlinux.org/index.php/QEMU_(%E6%AD%A3%E9%AB%94%E4%B8%AD%E6%96%87))

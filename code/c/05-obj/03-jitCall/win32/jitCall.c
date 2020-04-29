@@ -64,6 +64,7 @@ unsigned char fibCode[] = {
 int (*add)(int a, int b);
 int (*sum)(int n);
 int (*fib)(int n);
+// 習題: 請用這種方式算 power(a, b)
 
 int main() {
   add = (int (*)(int, int)) addCode;

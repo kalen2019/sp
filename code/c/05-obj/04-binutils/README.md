@@ -4,7 +4,7 @@
 
 * https://zh.wikipedia.org/zh-tw/GNU_Binutils
 
-## nm (Nemonic Name)
+## nm (name mangling 名稱修飾)
 
 印出符號表
 
@@ -42,7 +42,7 @@ PS D:\ccc\sp\code\c\05-objfile\04-binutils> size test.o
      76      44       0     120      78 test.o
 ```
 
-## strip
+## strip (中文:脫衣)
 
 ```
 $ nm test.o
