@@ -42,3 +42,22 @@ Disassembly of section .text:
    e:   90                      nop
    f:   90                      nop
 ```
+
+## 表頭
+
+```
+PS D:\ccc\sp\code\c\05-obj\01-objdump> objdump -h add.o
+
+add.o:     file format pe-i386
+
+Sections:
+Idx Name          Size      VMA       LMA       File off  Algn
+  0 .text         0000001c  00000000  00000000  000000b4  2**2
+                  CONTENTS, ALLOC, LOAD, READONLY, CODE
+  1 .data         00000000  00000000  00000000  00000000  2**2
+                  ALLOC, LOAD, DATA
+  2 .bss          00000000  00000000  00000000  00000000  2**2
+                  ALLOC
+  3 .rdata$zzz    00000014  00000000  00000000  000000d0  2**2
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+```
