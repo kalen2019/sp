@@ -106,9 +106,7 @@ for(;;) {
     case INDEX_op_movl_T0_r1:
     {
       extern void op_movl_T0_r1();
-      memcpy(gen_code_ptr,
-  (char *)&op_movl_T0_r1+0,
-  3);
+      memcpy(gen_code_ptr, (char *)&op_movl_T0_r1+0, 3);
       gen_code_ptr += 3;
       break;
     }
@@ -119,8 +117,7 @@ for(;;) {
       memcpy(gen_code_ptr,
       (char *)&op_addl_T0_im+0, 6);
       param1 = *opparam_ptr++;
-      *(uint32_t *)(gen_code_ptr + 2) =
-  param1;
+      *(uint32_t *)(gen_code_ptr + 2) = param1;
       gen_code_ptr += 6;
       break;
     }
@@ -235,10 +232,7 @@ data is modified in the page.
 
 longjmp() is used to jump to the exception handling code when an exception such as division by zero is encountered. When not using the software MMU, host signal handlers are used to catch the invalid memory accesses.
 
-QEMU supports precise exceptions in the sense that it is always able to retrieve the exact target CPU state at the time the exception occurred.4 Nothing has to be done for
-most of the target CPU state because it is explicitly stored and modified by the translated code. The target CPU state S which is not explicitly stored (for example the
-current Program Counter) is retrieved by re-translating the TB where the exception occurred in a mode where S is recorded before each translated target instruction. The
-host program counter where the exception was raised is used to find the corresponding target instruction and the state S.
+QEMU supports precise exceptions in the sense that it is always able to retrieve the exact target CPU state at the time the exception occurred.4 Nothing has to be done for most of the target CPU state because it is explicitly stored and modified by the translated code. The target CPU state S which is not explicitly stored (for example the current Program Counter) is retrieved by re-translating the TB where the exception occurred in a mode where S is recorded before each translated target instruction. The host program counter where the exception was raised is used to find the corresponding target instruction and the state S.
 
 ### 3.8 Hardware interrupts
 
@@ -282,8 +276,7 @@ User mode QEMU is 1.2 times faster than valgrind --skin=none version 1.9.6 [6], 
 
 ## 6 Conclusion and Future Work
 
-QEMU has reached the point where it is usable in everyday work, in particular for the emulation of commercial x86 OSes such as Windows. The PowerPC target is close
-to launch Mac OS X and the Sparc one begins to launch Linux. No other dynamic translator to date has supported so many targets on so many hosts, mainly because the porting complexity was underestimated. The QEMU approach seems a good compromise between performance and complexity.
+QEMU has reached the point where it is usable in everyday work, in particular for the emulation of commercial x86 OSes such as Windows. The PowerPC target is close to launch Mac OS X and the Sparc one begins to launch Linux. No other dynamic translator to date has supported so many targets on so many hosts, mainly because the porting complexity was underestimated. The QEMU approach seems a good compromise between performance and complexity.
 
 The following points still need to be addressed in the future:
 
@@ -291,14 +284,14 @@ The following points still need to be addressed in the future:
 * Full system emulation: ARM and MIPS targets need to be added.
 * Performance: the software MMU performance can be increased. Some critical micro operations can also be hand coded in assembler without much modifications in the current translation framework. The CPU main loop can also be hand coded in assembler.
 * Virtualization: when the host and target are the same, it is possible to run most of the code as is. The simplest implementation is to emulate the target kernel code as usual but to run the target user code as is.
-* Debugging: cache simulation and cycle counters could be added to make a debugger as in SIMICS
-[3].
+* Debugging: cache simulation and cycle counters could be added to make a debugger as in SIMICS [3].
 
 ## 7 Availability
 
 QEMU is available at http://bellard.org/qemu
 
 ## References
+
 * [1] Ian Piumarta, Fabio Riccardi, Optimizing direct threaded code by selective inlining, Proceedings of the 1998 ACM SIGPLAN Conference on Programming Language Design and Implementation (PLDI).
 * [2] Mark Probst, Fast Machine-Adaptable Dynamic binary Translation, Workshop on Binary Translation 2001.
 * [3] Peter S. Magnusson et al., SimICS/sun4m: A Virtual Workstation, Usenix Annual Technical Conference, June 15-18, 1998.
@@ -307,4 +300,9 @@ QEMU is available at http://bellard.org/qemu
 * [6] Julian Seward et al., Valgrind, an open-source memory debugger for x86-GNU/Linux, http://valgrind.kde.org/.
 * [7] The BYTEmark benchmark program, BYTE Magazine, Linux version available at http://www.tux.org/˜mayer/linux/bmark.html.
 
-Notes 1x86 CPUs refer to processors compatible with the Intel 80386 processor. 2This mode is now deprecated because it needs a patched target OS and because the target OS can access to the host QEMU address space. 3For simplicity, QEMU will in fact implement this behavior of ignoring the code cache invalidation instructions for all supported CPUs. 4In the x86 case, the virtual CPU cannot retrieve the exact eflags register because in some cases it is not computed because of condition code optimizations. This is not a major concern because the emulated code can still be restarted at the same point in any cases. 5At the time of writing, QEMU’s support for threading is considered to be immature due to locking issues within its CPU core emulation.
+## Notes 
+* 1 x86 CPUs refer to processors compatible with the Intel 80386 processor. 
+* 2 This mode is now deprecated because it needs a patched target OS and because the target OS can access to the host QEMU address space. 
+* 3 For simplicity, QEMU will in fact implement this behavior of ignoring the code cache invalidation instructions for all supported CPUs. 
+* 4 In the x86 case, the virtual CPU cannot retrieve the exact eflags register because in some cases it is not computed because of condition code optimizations. This is not a major concern because the emulated code can still be restarted at the same point in any cases. 
+* 5 At the time of writing, QEMU’s support for threading is considered to be immature due to locking issues within its CPU core emulation.
