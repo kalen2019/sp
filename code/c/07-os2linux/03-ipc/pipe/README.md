@@ -7,3 +7,5 @@ guest@localhost:~/sp/code/c/07-linux/03-ipc/pipe$ Message from the parent: Hello
 ^C
 
 ```
+
+* https://github.com/DevNaga/gists/blob/master/pipes.c

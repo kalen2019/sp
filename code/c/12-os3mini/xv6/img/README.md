@@ -4,10 +4,8 @@
 
 安裝後位置:
 1. windows : C:\Program Files\qemu
-  
-## 載入系統 -- 以 xv6 為例
 
-先切到 sp\code\c\12-os3mini\xv6\img 資料夾
+## 載入系統 -- 以 xv6 為例
 
 ```
 PS D:\ccc\course\sp\code\c\12-os3mini\xv6\img> qemu-system-i386 -nographic -drive file=fs.img,index=1,media=disk,format=raw -drive file=xv6.img,index=0,media=disk,format=raw -smp 2 -m 512

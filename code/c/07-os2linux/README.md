@@ -13,4 +13,6 @@
     * https://github.com/bradfa/tlpi-dist/
     * http://man7.org/tlpi/code/online/all_files_by_chapter.html
 * [Advanced Programming in the UNIX® Environment, Third Edition](http://www.apuebook.com/toc3e.html)
+* [Systems Programming under Linux](https://github.com/DevNaga/linux-systems-programming-with-c)
+    * 程式 -- https://github.com/DevNaga/gists/
 

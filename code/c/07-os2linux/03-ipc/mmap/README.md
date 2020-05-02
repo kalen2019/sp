@@ -1,4 +1,7 @@
+# Shared Memory
 
+
+* [POSIX Shared Memory](http://logan.tw/posts/2018/01/07/posix-shared-memory/)
 
 
 ## shm1.c
@@ -11,3 +14,9 @@ Child read: hello
 Child wrote: goodbye
 After 1s, parent read: goodbye
 ```
+
+程式
+
+* https://github.com/DevNaga/gists/blob/master/mmap.c
+* https://github.com/DevNaga/gists/blob/master/mmap_comm.c
+* https://github.com/DevNaga/gists/blob/master/mmap_sync.c

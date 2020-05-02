@@ -9,6 +9,12 @@
 * https://www.jmarshall.com/easy/http/
 * https://gist.github.com/bdahlia/7826649
 
+Example:
+
+* https://github.com/DevNaga/gists/blob/master/pthread_server.c
+* https://github.com/DevNaga/gists/blob/master/raw_socket.c
+* https://github.com/DevNaga/gists/blob/master/tcp_client.c
+* https://github.com/DevNaga/gists/blob/master/tcp_select_server.c
 
 ## 參考文獻
 
