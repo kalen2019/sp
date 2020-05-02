@@ -1,5 +1,14 @@
 # Linux/UNIX
 
+## 連上 linux 的工具
+
+先安裝 putty ，然後連到下列帳號:
+
+* guest@172.104.100.202
+
+密碼為 csienqu
+
+
 ## GNU 工具鏈
 
 * [系統程式 - 附錄](https://www.slideshare.net/ccckmit/ss-61169583)
