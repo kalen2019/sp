@@ -2,7 +2,7 @@
 
 extern void hcode();
 
-unsigned short m[65536], A, D;
+unsigned short m[65536], A=0, D=0;
 
 int main() {
   hcode();

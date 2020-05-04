@@ -24,7 +24,7 @@ int disasm(uint16_t *im, int16_t imTop, char *fileHead) {
     if ((I & 0x8000) == 0) { // A 指令
       sprintf(hCode, "@%d", I);
       printf("%s\n", hCode);
-      fprintf(sFile, "L%d: # %s\n	movw $%d, %%ax\n", PC, hCode, I);
+      fprintf(sFile, "L%d: # %s\n	movl $%d, %%eax\n", PC, hCode, I);
     } else { // C 指令
       a = (I & 0x1000) >> 12;
       c = (I & 0x0FC0) >>  6;
@@ -34,16 +34,16 @@ int disasm(uint16_t *im, int16_t imTop, char *fileHead) {
       char AM = (a == 0) ? 'A' : 'M';
       switch (c) { // 處理 c1..6, 計算 aluOut
         case 0x2A: sprintf(op, "0"); // "0",   "101010"
-          sprintf(xop, "	movw $0, %%bx"); break;
+          sprintf(xop, "	movl $0, %%ebx"); break;
         case 0x3F: sprintf(op, "1"); // "1",   "111111"
-          sprintf(xop, "	movw $1, %%bx"); break;
+          sprintf(xop, "	movl $1, %%ebx"); break;
         case 0x3A: sprintf(op, "-1"); // "-1",  "111010"
-          sprintf(xop, "	movw $-1, %%bx"); break;
+          sprintf(xop, "	movl $-1, %%ebx"); break;
         case 0x0C: sprintf(op, "D"); // "D",   "001100"
-          sprintf(xop, "	movw %%dx, %%bx"); break;
+          sprintf(xop, "	movl %%edx, %%ebx"); break;
         case 0x30: sprintf(op, "%c", AM); // "AM",  "110000"
           if (a == 0)
-            sprintf(xop, "	movw %%ax, %%bx");
+            sprintf(xop, "	movl %%eax, %%ebx");
           else
             sprintf(xop, "	movw _m(%%eax,%%eax), %%bx"); break;
         case 0x0D: sprintf(op, "!D"); // "!D",  "001101"
@@ -55,60 +55,60 @@ int disasm(uint16_t *im, int16_t imTop, char *fileHead) {
             sprintf(xop, "	movw _m(%%eax,%%eax), %%bx\n	%%testw	%%bx, %%bx\n	sete %%bl");
           break;
         case 0x0F: sprintf(op, "-D");
-            sprintf(xop, "	movw %%dx, %%bx\n	negw %%bx"); break; // "-D",  "001111"
+            sprintf(xop, "	movl %%edx, %%ebx\n	negl %%ebx"); break; // "-D",  "001111"
         case 0x33: sprintf(op, "-%c", AM); // "-AM", "110011"
           if (a == 0)
-            sprintf(xop, "	movw %%ax, %%bx\n	negw %%bx");
+            sprintf(xop, "	movl %%eax, %%ebx\n	negl %%ebx");
           else
-            sprintf(xop, "	movw _m(%%eax,%%eax), %%bx\n	negw %%bx");
+            sprintf(xop, "	movw _m(%%eax,%%eax), %%bx\n	negl %%ebx");
           break;
         case 0x1F: sprintf(op, "D+1"); // "D+1", "011111"
-          sprintf(xop, "	movw %%dx, %%bx\n	addw $1, %%bx");
+          sprintf(xop, "	movl %%edx, %%ebx\n	addl $1, %%ebx");
           break;
         case 0x37: sprintf(op, "%c+1", AM); // "AM+1","110111"
           if (a == 0)
-            sprintf(xop, "	movw %%ax, %%bx\n	addw $1, %%bx");
+            sprintf(xop, "	movl %%eax, %%ebx\n	addl $1, %%ebx");
           else
-            sprintf(xop, "	movw _m(%%eax,%%eax), %%bx\n	addw $1, %%bx");
+            sprintf(xop, "	movw _m(%%eax,%%eax), %%bx\n	addl $1, %%ebx");
           break;
         case 0x0E: sprintf(op, "D-1"); // "D-1", "001110"
-          sprintf(xop, "	movw %%dx, %%bx\n	subw $1, %%bx");
+          sprintf(xop, "	movl %%edx, %%ebx\n	subl $1, %%ebx");
           break;
         case 0x32: sprintf(op, "%c-1", AM); // "AM-1","110010"
           if (a == 0)
-            sprintf(xop, "	movw %%ax, %%bx\n	subw $1, %%bx");
+            sprintf(xop, "	movl %%eax, %%ebx\n	subl $1, %%ebx");
           else
-            sprintf(xop, "	movw _m(%%eax,%%eax), %%bx\n	subw $1, %%bx");
+            sprintf(xop, "	movw _m(%%eax,%%eax), %%bx\n	subl $1, %%ebx");
           break;
         case 0x02: sprintf(op, "D+%c", AM); // "D+AM","000010"
           if (a == 0)
-            sprintf(xop, "	movw %%dx, %%bx\n	addw %%ax, %%bx");
+            sprintf(xop, "	movl %%edx, %%ebx\n	addl %%eax, %%ebx");
           else
-            sprintf(xop, "	movw _m(%%eax,%%eax), %%bx\n	addw %%dx, %%bx");
+            sprintf(xop, "	movw _m(%%eax,%%eax), %%bx\n	addl %%edx, %%ebx");
           break;
         case 0x13: sprintf(op, "D-%c", AM); // "D-AM","010011"
           if (a == 0)
-            sprintf(xop, "	movw %%dx, %%bx\n	subw %%ax, %%bx");
+            sprintf(xop, "	movl %%edx, %%ebx\n	subl %%eax, %%ebx");
           else
-            sprintf(xop, "	movw %%dx, %%bx\n	movw _m(%%eax,%%eax), %%cx\n	subw %%cx, %%bx");
+            sprintf(xop, "	movl %%edx, %%ebx\n	movw _m(%%eax,%%eax), %%cx\n	subl %%ecx, %%ebx");
           break;
         case 0x07: sprintf(op, "%c-D", AM); // "AM-D","000111"
           if (a == 0)
-            sprintf(xop, "	movw %%ax, %%bx\n	subw %%dx, %%bx");
+            sprintf(xop, "	movl %%eax, %%ebx\n	subl %%edx, %%ebx");
           else
-            sprintf(xop, "	movw _m(%%eax,%%eax), %%bx\n	subw %%dx, %%bx");
+            sprintf(xop, "	movw _m(%%eax,%%eax), %%bx\n	subl %%edx, %%ebx");
           break;
         case 0x00: sprintf(op, "D&%c", AM); // "D&AM","000000"
           if (a == 0)
-            sprintf(xop, "	movw %%dx, %%bx\n	andw %%ax, %%bx");
+            sprintf(xop, "	movl %%edx, %%ebx\n	andl %%eax, %%ebx");
           else
-            sprintf(xop, "	movw %%dx, %%bx\n	movw _m(%%eax,%%eax), %%cx\n	andw %%cx, %%bx");
+            sprintf(xop, "	movl %%edx, %%ebx\n	movw _m(%%eax,%%eax), %%cx\n	andl %%ecx, %%ebx");
           break;
         case 0x15: sprintf(op, "D|%c", AM); // "D|AM","010101"
           if (a == 0)
-            sprintf(xop, "	movw %%dx, %%bx\n	orw %%ax, %%bx");
+            sprintf(xop, "	movl %%edx, %%ebx\n	orl %%eax, %%ebx");
           else
-            sprintf(xop, "	movw %%dx, %%bx\n	movw _m(%%eax,%%eax), %%cx\n	orw %%cx, %%bx");
+            sprintf(xop, "	movl %%edx, %%ebx\n	movw _m(%%eax,%%eax), %%cx\n	orl %%ecx, %%ebx");
           break;
         default: assert(0);
       }
@@ -125,15 +125,15 @@ int disasm(uint16_t *im, int16_t imTop, char *fileHead) {
 
       char dAsmCode[100] = "";
       if ((d & 0x01)!=0) strcat(dAsmCode, "\n	movw %bx, _m(%eax,%eax)");
-      if ((d & 0x02)!=0) strcat(dAsmCode, "\n	movw %bx, %dx");
-      if ((d & 0x04)!=0) strcat(dAsmCode, "\n	movw %bx, %ax");
+      if ((d & 0x02)!=0) strcat(dAsmCode, "\n	movl %ebx, %edx");
+      if ((d & 0x04)!=0) strcat(dAsmCode, "\n	movl %ebx, %eax");
 
       char jAsmCode[200] = "";
       if (j != 0) {
         if (j == 7)
           sprintf(jAsmCode, "\n	jmp ToLA");
         else {
-          sprintf(jAsmCode, "\n	cmpw $0, %%bx\n	%s ToLA", jX86[j]);
+          sprintf(jAsmCode, "\n	cmpl $0, %%ebx\n	%s ToLA", jX86[j]);
         }
       }
       fprintf(sFile, "%s%s%s\n", xop, dAsmCode, jAsmCode);

@@ -5,27 +5,27 @@ _hcode:
 	pushl	%ebp
 	movl	%esp, %ebp
 	subl	$48, %esp
-L0: # @2
-	movw $2, %ax
-L1: # D=A
-	movw %ax, %bx
-	movw %bx, %dx
-L2: # @3
-	movw $3, %ax
-L3: # D=D+A
-	movw %dx, %bx
-	addw %ax, %bx
-	movw %bx, %dx
-L4: # @0
-	movw $0, %ax
-L5: # M=D
-	movw %dx, %bx
-	movw %bx, _m(%eax,%eax)
-	movw	%ax, _A
-	movw	%dx, _D
+
+L0:
+	movl $0, %eax
+	movl $0, %ebx
+	movl $0, %ecx
+	movl $0, %edx
+
+L1:
+  addl $1, %ebx
+L2:
+  cmpl $5, %ebx
+  jge  EXIT
+L3:
+	movl $1, %eax
+	jmp  ToLA
+EXIT:
+	popl	%ebp
 	nop
 	leave
 	ret
+
 ToLA:
 # +printf
 	movl	%edx, 16(%esp)
@@ -44,6 +44,7 @@ ToLA:
 	addl $JumpTable, %ecx
 	movl (%ecx), %ecx
 	jmp *%ecx
+
 .section .rdata,"dr"
 LC0:
 	.ascii "eax=%d ebx=%d ecx=%d edx=%d\12\0"
@@ -53,6 +54,4 @@ JumpTable:
 	.long L1
 	.long L2
 	.long L3
-	.long L4
-	.long L5
 	.text

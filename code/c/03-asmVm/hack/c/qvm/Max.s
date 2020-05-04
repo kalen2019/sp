@@ -2,78 +2,93 @@
 	.globl	_hcode
 	.def	_hcode;	.scl	2;	.type	32;	.endef
 _hcode:
+	pushl	%ebp
+	movl	%esp, %ebp
+	subl	$48, %esp
 L0: # @8
-	movl $8, %eax
+	movw $8, %ax
 L1: # D=A
-	movl %eax, %ebx
-	movl %ebx, %edx
+	movw %ax, %bx
+	movw %bx, %dx
 L2: # @0
-	movl $0, %eax
+	movw $0, %ax
 L3: # M=D
-	movl %edx, %ebx
-	movl %ebx, _m(%eax,%eax)
+	movw %dx, %bx
+	movw %bx, _m(%eax,%eax)
 L4: # @5
-	movl $5, %eax
+	movw $5, %ax
 L5: # D=A
-	movl %eax, %ebx
-	movl %ebx, %edx
+	movw %ax, %bx
+	movw %bx, %dx
 L6: # @1
-	movl $1, %eax
+	movw $1, %ax
 L7: # M=D
-	movl %edx, %ebx
-	movl %ebx, _m(%eax,%eax)
+	movw %dx, %bx
+	movw %bx, _m(%eax,%eax)
 L8: # @0
-	movl $0, %eax
+	movw $0, %ax
 L9: # D=M
-	movl _m(%eax,%eax), %ebx
-	movl %ebx, %edx
+	movw _m(%eax,%eax), %bx
+	movw %bx, %dx
 L10: # @1
-	movl $1, %eax
+	movw $1, %ax
 L11: # D=D-M
-	movl %edx, %ebx
-	movl _m(%eax,%eax), %ecx
-	subl %ecx, %ebx
-	movl %ebx, %edx
+	movw %dx, %bx
+	movw _m(%eax,%eax), %cx
+	subw %cx, %bx
+	movw %bx, %dx
 L12: # @18
-	movl $18, %eax
+	movw $18, %ax
 L13: # D;JGT
-	movl %edx, %ebx
-	cmpl $0, %ebx
-	movl %eax, %ecx
-	sall $2, %ecx
-	addl $JumpTable, %ecx
-	movl (%ecx), %ecx
-	jg SKIP0
-	jmp *%ecx
-SKIP0:
+	movw %dx, %bx
+	cmpw $0, %bx
+	jg ToLA
 L14: # @1
-	movl $1, %eax
+	movw $1, %ax
 L15: # D=M
-	movl _m(%eax,%eax), %ebx
-	movl %ebx, %edx
+	movw _m(%eax,%eax), %bx
+	movw %bx, %dx
 L16: # @20
-	movl $20, %eax
+	movw $20, %ax
 L17: # 0;JMP
-	movl $0, %ebx
-	movl %eax, %ecx
-	sall $2, %ecx
-	addl $JumpTable, %ecx
-	movl (%ecx), %ecx
-	jmp *%ecx
+	movw $0, %bx
+	jmp ToLA
 L18: # @0
-	movl $0, %eax
+	movw $0, %ax
 L19: # D=M
-	movl _m(%eax,%eax), %ebx
-	movl %ebx, %edx
+	movw _m(%eax,%eax), %bx
+	movw %bx, %dx
 L20: # @2
-	movl $2, %eax
+	movw $2, %ax
 L21: # M=D
-	movl %edx, %ebx
-	movl %ebx, _m(%eax,%eax)
+	movw %dx, %bx
+	movw %bx, _m(%eax,%eax)
 	movw	%ax, _A
 	movw	%dx, _D
+	nop
+	leave
 	ret
+ToLA:
+# +printf
+	movl	%edx, 16(%esp)
+	movl	%ecx, 12(%esp)
+	movl	%ebx, 8(%esp)
+	movl	%eax, 4(%esp)
+	movl	$LC0, (%esp)
+	call	_printf
+	movl  4(%esp), %eax
+	movl  8(%esp), %ebx
+	movl  12(%esp), %ecx
+	movl  16(%esp), %edx
+# -printf
+	movl %eax, %ecx
+	sall $2, %ecx
+	addl $JumpTable, %ecx
+	movl (%ecx), %ecx
+	jmp *%ecx
 .section .rdata,"dr"
+LC0:
+	.ascii "eax=%d ebx=%d ecx=%d edx=%d\12\0"
 	.align 4
 JumpTable:
 	.long L0

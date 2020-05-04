@@ -2,91 +2,105 @@
 	.globl	_hcode
 	.def	_hcode;	.scl	2;	.type	32;	.endef
 _hcode:
+	pushl	%ebp
+	movl	%esp, %ebp
+	subl	$48, %esp
 L0: # @10
-	# movl $10, %eax
-	movl $-1, %eax
+	movw $10, %ax
 L1: # D=A
-	movl %eax, %ebx
-	movl %ebx, %edx
+	movw %ax, %bx
+	movw %bx, %dx
 L2: # @0
-	movl $0, %eax
+	movw $0, %ax
 L3: # M=D
-	movl %edx, %ebx
-	movl %ebx, _m(%eax,%eax)
+	movw %dx, %bx
+	movw %bx, _m(%eax,%eax)
 L4: # @16
-	movl $16, %eax
+	movw $16, %ax
 L5: # M=1
-	movl $1, %ebx
-	movl %ebx, _m(%eax,%eax)
+	movw $1, %bx
+	movw %bx, _m(%eax,%eax)
 L6: # @17
-	movl $17, %eax
+	movw $17, %ax
 L7: # M=0
-	movl $0, %ebx
-	movl %ebx, _m(%eax,%eax)
+	movw $0, %bx
+	movw %bx, _m(%eax,%eax)
 L8: # @16
-	movl $16, %eax
+	movw $16, %ax
 L9: # D=M
-	movl _m(%eax,%eax), %ebx
-	movl %ebx, %edx
+	movw _m(%eax,%eax), %bx
+	movw %bx, %dx
 L10: # @0
-	movl $0, %eax
+	movw $0, %ax
 L11: # D=D-M
-	movl %edx, %ebx
-	movl _m(%eax,%eax), %ecx
-	subl %ecx, %ebx
-	movl %ebx, %edx
+	movw %dx, %bx
+	movw _m(%eax,%eax), %cx
+	subw %cx, %bx
+	movw %bx, %dx
 L12: # @22
-	movl $22, %eax
+	movw $22, %ax
 L13: # D;JGT
-	movl %edx, %ebx
-	cmpl $0, %ebx
-	movl %eax, %ecx
-	sall $2, %ecx
-	addl $JumpTable, %ecx
-	movl (%ecx), %ecx
-	jg SKIP0
-	jmp *%ecx
-SKIP0:
+	movw %dx, %bx
+	cmpw $0, %bx
+	jg ToLA
 L14: # @16
-	movl $16, %eax
+	movw $16, %ax
 L15: # D=M
-	movl _m(%eax,%eax), %ebx
-	movl %ebx, %edx
+	movw _m(%eax,%eax), %bx
+	movw %bx, %dx
 L16: # @17
-	movl $17, %eax
+	movw $17, %ax
 L17: # M=D+M
-	movl _m(%eax,%eax), %ebx
-	addl %edx, %ebx
-	movl %ebx, _m(%eax,%eax)
+	movw _m(%eax,%eax), %bx
+	addw %dx, %bx
+	movw %bx, _m(%eax,%eax)
 L18: # @16
-	movl $16, %eax
+	movw $16, %ax
 L19: # M=M+1
-	movl _m(%eax,%eax), %ebx
-	addl $1, %ebx
-	movl %ebx, _m(%eax,%eax)
+	movw _m(%eax,%eax), %bx
+	addw $1, %bx
+	movw %bx, _m(%eax,%eax)
 L20: # @8
-	movl $8, %eax
+	movw $8, %ax
 L21: # 0;JMP
-	movl $0, %ebx
-	movl %eax, %ecx
-	sall $2, %ecx
-	addl $JumpTable, %ecx
-	movl (%ecx), %ecx
-	jmp *%ecx
+	movw $0, %bx
+	jmp ToLA
 L22: # @17
-	movl $17, %eax
+	movw $17, %ax
 L23: # D=M
-	movl _m(%eax,%eax), %ebx
-	movl %ebx, %edx
+	movw _m(%eax,%eax), %bx
+	movw %bx, %dx
 L24: # @1
-	movl $1, %eax
+	movw $1, %ax
 L25: # M=D
-	movl %edx, %ebx
-	movl %ebx, _m(%eax,%eax)
+	movw %dx, %bx
+	movw %bx, _m(%eax,%eax)
 	movw	%ax, _A
 	movw	%dx, _D
+	nop
+	leave
 	ret
+ToLA:
+# +printf
+	movl	%edx, 16(%esp)
+	movl	%ecx, 12(%esp)
+	movl	%ebx, 8(%esp)
+	movl	%eax, 4(%esp)
+	movl	$LC0, (%esp)
+	call	_printf
+	movl  4(%esp), %eax
+	movl  8(%esp), %ebx
+	movl  12(%esp), %ecx
+	movl  16(%esp), %edx
+# -printf
+	movl %eax, %ecx
+	sall $2, %ecx
+	addl $JumpTable, %ecx
+	movl (%ecx), %ecx
+	jmp *%ecx
 .section .rdata,"dr"
+LC0:
+	.ascii "eax=%d ebx=%d ecx=%d edx=%d\12\0"
 	.align 4
 JumpTable:
 	.long L0

@@ -1,75 +1,106 @@
 # qvm.c
 
-目前 Add, Max 都對了，但是 sum 當掉。
-
 ```
-PS D:\ccc\course\sp\code\c\03-asmVm\hack\c\qvm> gcc main.c Add.s -o Add
-PS D:\ccc\course\sp\code\c\03-asmVm\hack\c\qvm> ./Add
+D:\ccc\course\sp\code\c\03-asmVm\hack\c\qvm>gcc hack2x86.c -o hack2x86
+PS D:\ccc\course\sp\code\c\03-asmVm\hack\c\qvm> ./run Add
+
+D:\ccc\course\sp\code\c\03-asmVm\hack\c\qvm>hack2x86 Add
+@2
+D=A
+@3
+D=D+A
+@0
+M=D
+
+D:\ccc\course\sp\code\c\03-asmVm\hack\c\qvm>gcc main.c Add.s -o Add
+
+D:\ccc\course\sp\code\c\03-asmVm\hack\c\qvm>Add
 A=0 D=5
-PS D:\ccc\course\sp\code\c\03-asmVm\hack\c\qvm> gcc main.c Max.s -o Max
-PS D:\ccc\course\sp\code\c\03-asmVm\hack\c\qvm> ./Max
-A=2 D=5
-PS D:\ccc\course\sp\code\c\03-asmVm\hack\c\qvm> gcc main.c sum.s -o vm 
-PS D:\ccc\course\sp\code\c\03-asmVm\hack\c\qvm> gcc main.c sum.s -o sum
-PS D:\ccc\course\sp\code\c\03-asmVm\hack\c\qvm> ./sum
-// 當掉
+PS D:\ccc\course\sp\code\c\03-asmVm\hack\c\qvm> ./run Max
+
+D:\ccc\course\sp\code\c\03-asmVm\hack\c\qvm>hack2x86 Max
+@8
+D=A
+@0
+M=D
+@5
+D=A
+@1
+M=D
+@0
+D=M
+@1
+@18
+D;JGT
+@1
+D=M
+@20
+0;JMP
+@0
+D=M
+@2
+M=D
+
+D:\ccc\course\sp\code\c\03-asmVm\hack\c\qvm>gcc main.c Max.s -o Max
+
+D:\ccc\course\sp\code\c\03-asmVm\hack\c\qvm>Max
+eax=18 ebx=2686979 ecx=5 edx=3
+A=2 D=8
+PS D:\ccc\course\sp\code\c\03-asmVm\hack\c\qvm> ./run sum
+
+D:\ccc\course\sp\code\c\03-asmVm\hack\c\qvm>hack2x86 sum
+@10
+D=A
+@0
+M=D
+@16
+M=1
+@17
+M=0
+@16
+D=M
+@0
+D=D-M
+@22
+D;JGT
+@16
+D=M
+@17
+M=D+M
+@16
+M=M+1
+@8
+0;JMP
+@17
+D=M
+@1
+M=D
+
+D:\ccc\course\sp\code\c\03-asmVm\hack\c\qvm>gcc main.c sum.s -o sum
+
+D:\ccc\course\sp\code\c\03-asmVm\hack\c\qvm>sum
+eax=8 ebx=3538944 ecx=10 edx=1
+eax=8 ebx=3538944 ecx=4194314 edx=2
+eax=8 ebx=3538944 ecx=4194314 edx=3
+eax=8 ebx=3538944 ecx=4194314 edx=4
+eax=8 ebx=3538944 ecx=4194314 edx=5
+eax=8 ebx=3538944 ecx=4194314 edx=6
+eax=8 ebx=3538944 ecx=4194314 edx=7
+eax=8 ebx=3538944 ecx=4194314 edx=8
+eax=8 ebx=3538944 ecx=4194314 edx=9
+eax=8 ebx=3538944 ecx=4194314 edx=10
+eax=22 ebx=3538945 ecx=4194314 edx=1
+A=1 D=55
 ```
 
+## 測試跳轉
 
 ```
-   @8
-   D=A
-   @R0
-   M=D
-   @5
-   D=A
-   @R1
-   M=D
-// Computes R2 = max(R0, R1)  (R0,R1,R2 refer to  RAM[0],RAM[1],RAM[2])
-   @R0
-   D=M              // D = first number
-   @R1
-   D=D-M            // D = first number - second number
-   @OUTPUT_FIRST
-   D;JGT            // if D>0 (first is greater) goto output_first
-   @R1
-   D=M              // D = second number
-   @OUTPUT_D
-   0;JMP            // goto output_d
-(OUTPUT_FIRST)
-   @R0             
-   D=M              // D = first number
-(OUTPUT_D)
-   @R2
-   M=D              // M[2] = D (greatest number)
-// (INFINITE_LOOP)
-//    @INFINITE_LOOP
-//    0;JMP            // infinite loop
-
+PS D:\ccc\course\sp\code\c\03-asmVm\hack\c\qvm> gcc main.c hcodeMy.s -o hcodeMy
+PS D:\ccc\course\sp\code\c\03-asmVm\hack\c\qvm> ./hcodeMy
+eax=1 ebx=1 ecx=0 edx=0
+eax=1 ebx=2 ecx=4199342 edx=0
+eax=1 ebx=3 ecx=4199342 edx=0
+eax=1 ebx=4 ecx=4199342 edx=0
 ```
 
-
-Run: 
-
-```
-PS D:\ccc\course\sp\code\c\03-asmVm\hack\c> ./vm ../test/Max.bin
-PC=0000 I=0008 A=0008 D=0000 m[A]=0000
-PC=0001 I=EC10 A=0008 D=0008 m[A]=0000 a=0 c=30 d=2 j=0
-PC=0002 I=0000 A=0000 D=0008 m[A]=0000
-PC=0003 I=E308 A=0000 D=0008 m[A]=0008 a=0 c=0C d=1 j=0
-PC=0004 I=0005 A=0005 D=0008 m[A]=0000
-PC=0005 I=EC10 A=0005 D=0005 m[A]=0000 a=0 c=30 d=2 j=0
-PC=0006 I=0001 A=0001 D=0005 m[A]=0000
-PC=0007 I=E308 A=0001 D=0005 m[A]=0005 a=0 c=0C d=1 j=0
-PC=0008 I=0000 A=0000 D=0005 m[A]=0008
-PC=0009 I=FC10 A=0000 D=0008 m[A]=0008 a=1 c=30 d=2 j=0
-PC=000A I=0001 A=0001 D=0008 m[A]=0005
-PC=000B I=F4D0 A=0001 D=0003 m[A]=0005 a=1 c=13 d=2 j=0
-PC=000C I=0012 A=0012 D=0003 m[A]=0000
-PC=000D I=E301 A=0012 D=0003 m[A]=0000 a=0 c=0C d=0 j=1
-PC=0012 I=0000 A=0000 D=0003 m[A]=0008
-PC=0013 I=FC10 A=0000 D=0008 m[A]=0008 a=1 c=30 d=2 j=0
-PC=0014 I=0002 A=0002 D=0008 m[A]=0000
-PC=0015 I=E308 A=0002 D=0008 m[A]=0008 a=0 c=0C d=1 j=0
-exit program !
-```
