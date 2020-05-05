@@ -1,4 +1,5 @@
 // cc86 會將 C 語言轉為中間碼。
+// ast : 參考 -- https://en.wikipedia.org/wiki/Abstract_syntax_tree
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -37,6 +38,8 @@ struct ident_s {
     int tk;          // type-id or keyword
     int hash;
     char *name;     // name of this identifier
+    int nameLen; // add by ccc: name 的長度。
+    // ccc: 當區域變數和全域變數名稱一樣時，會暫存在 hclass, htype, hval 裏。
     /* fields starting with 'h' were designed to save and restore
      * the global class/type/val in order to handle the case if a
      * function declares a local with the same name as a global.
@@ -288,6 +291,7 @@ void next()
                 }
             }
             id->name = pp;
+            id->nameLen = p - pp;
             id->hash = tk;
             tk = id->tk = Id;  // token type identifier
             return;
@@ -416,6 +420,7 @@ void next()
 
 char fatal(char *msg) { printf("%d: %s\n", line, msg); exit(-1); }
 
+// ccc: expr 裏主要設定 ast 中的值之設定關係。
 /* expression parsing
  * lev represents an operator
  * because each operator `token` is arranged in order of priority, so
@@ -471,7 +476,7 @@ void expr(int lev)
         break;
     case Id:
         d = id; next();
-        // function call
+        // function call // ccc: 函數呼叫   ex: sum(n) ....
         if (tk == '(') {
             if (d->class != Syscall && d->class != Func)
                 fatal("bad function call");
@@ -484,16 +489,16 @@ void expr(int lev)
             }
             next();
             // function or system call id
-            *--n = t; *--n = d->val; *--n = (int) b; *--n = d->class;
+            *--n = t; *--n = d->val; *--n = (int) b; *--n = d->class; // ccc: t,_,b,_: 參數個數t，返回值val，呼叫結束點b， class 
             ty = d->type;
         }
         // enumeration, only enums have ->class == Num
         else if (d->class == Num) { *--n = d->val; *--n = Num; ty = INT; }
         else {
-            // Variable get offset
+            // Variable get offset // ccc: 變數直接取得位移。
             switch (d->class) {
-            case Loc: case Par: *--n = loc - d->val; *--n = Loc; break;
-            case Glo: *--n = d->val; *--n = Num; break;
+            case Loc: case Par: *--n = loc - d->val; *--n = Loc; break; // ccc: 區域變數取得位移
+            case Glo: *--n = d->val; *--n = Num; break; // ccc: 全域變數取得值。
             default: fatal("undefined variable");
             }
             *--n = ty = d->type; *--n = Load;
@@ -529,7 +534,7 @@ void expr(int lev)
         expr(Inc); // dereference has the same precedence as Inc(++)
         if (ty >= PTR) ty -= PTR;
         else fatal("bad dereference");
-        if (ty >= CHAR && ty <= PTR) {
+        if (ty >= CHAR && ty <= PTR) { // ccc: 是取內容 ex: *a = 3
             *--n = ty; *--n = Load;
         } else fatal("unexpected type");
         break;
@@ -544,7 +549,7 @@ void expr(int lev)
     case '!': // "!x" is equivalent to "x == 0"
         next(); expr(Inc);
         if (*n == Num) n[1] = !n[1];
-        else { *--n = 0; *--n = Num; --n; *n = (int) (n + 3); *--n = Eq; }
+        else { *--n = 0; *--n = Num; --n; *n = (int) (n + 3); *--n = Eq; } // ccc: x 0 Num .. Eq
         ty = INT;
         break;
     case '~': // "~x" is equivalent to "x ^ -1"
@@ -554,7 +559,7 @@ void expr(int lev)
         ty = INT;
         break;
     case Add:
-        next(); expr(Inc); ty = INT;
+        next(); expr(Inc); ty = INT;  // ccc: ??
         break;
     case Sub:
         next();
@@ -563,7 +568,7 @@ void expr(int lev)
         else { *--n = -1; *--n = Num; --n; *n = (int) (n + 3); *--n = Mul; }
         ty = INT;
         break;
-    case Div:
+    case Div:           // ccc: ??
     case Mod:
         break;
     // processing ++x and --x. x-- and x++ is handled later
@@ -581,7 +586,7 @@ void expr(int lev)
         // during recursion, so back up currently processed expression type
         t = ty; b = n;
         switch (tk) {
-        case Assign:
+        case Assign: // ccc: id=exp
             next();
             // the left part is processed by the variable part of `tk=ID`
             // and pushes the address
@@ -589,7 +594,7 @@ void expr(int lev)
             // get the value of the right part `expr` as the result of `a=expr`
             expr(Assign); *--n = (int) (b + 2); *--n = ty = t; *--n = Assign;
             break;
-        case AddAssign: // right associated
+        case AddAssign: // right associated  // ccc:  ex: a+=exp
         case SubAssign:
         case MulAssign:
         case DivAssign:
@@ -623,10 +628,10 @@ void expr(int lev)
             else { *--n = (int) b; *--n = Lan; }
             ty = INT;
             break;
-        case Or: // push the current value, calculate the right value
+        case Or: // push the current value, calculate the right value // ccc:推入堆疊後進行 or 運算
             next(); expr(Xor);
-            if (*n == Num && *b == Num) n[1] = b[1] | n[1];
-            else { *--n = (int) b; *--n = Or; }
+            if (*n == Num && *b == Num) n[1] = b[1] | n[1]; // ccc: ex: 3|5 直接算出結果。
+            else { *--n = (int) b; *--n = Or; } // ccc: 至少有一變數，使用 stack b or
             ty = INT;
             break;
         case Xor:
@@ -801,17 +806,21 @@ void gen(int *n)
     switch (i) {
     case Num: // get the value of integer
         *++e = IMM; *++e = n[1];
+        debug("IMM %d\n", n[1]);
         break;
     case Loc: // get the value of variable
         *++e = LEA; *++e = n[1];
+        debug("LEA %d\n", n[1]);
         break;
     case Load:
         gen(n + 2); // load the value
         if (n[1] <= INT || n[1] >= PTR) { *++e = (n[1] == CHAR) ? LC : LI; }
+        debug("LOAD %d\n", n[1]);
         break;
     case Assign: // assign the value to variables
         gen((int *) n[2]); *++e = PSH; gen(n + 3);
         *++e = (n[1] == CHAR) ? SC : SI;
+        debug("ASSIGN %d\n", n[2]);
         break;
     // increment or decrement variables
     case Inc:
@@ -823,8 +832,7 @@ void gen(int *n)
         *++e = (i == Inc) ? ADD : SUB;
         *++e = (n[1] == CHAR) ? SC : SI;
         break;
-    case Cond: // if else condition case
-    // ccc: 如果語句 -- if condition expression elsestmt
+    case Cond: // if else condition case // ccc: 如果語句 -- if condition expression elsestmt
         gen((int *) n[1]); // condition
         *++e = BZ; b = ++e;
         gen((int *) n[2]); // expression
@@ -937,6 +945,7 @@ void gen(int *n)
     }
 }
 
+// ccc: stmt 裏主要是控制程式，處理各種 label 與 goto 的紀錄關係。
 // statement parsing (syntax analysis, except for declarations)
 void stmt(int ctx)
 {
@@ -946,7 +955,7 @@ void stmt(int ctx)
     struct member_s *m;
 
     switch (tk) {
-    case Enum:
+    case Enum: // ccc: 列舉 enum {...}
         next();
         if (tk != '{') next();
         if (tk == '{') {
@@ -957,9 +966,9 @@ void stmt(int ctx)
                 next();
                 if (tk == Assign) {
                     next();
-                    expr(Cond);
+                    expr(Cond); // ccc: id=exp
                     if (*n != Num) fatal("bad enum initializer");
-                    i = n[1];
+                    i = n[1]; // ccc: i = num(exp)
                 }
                 id->class = Num; id->type = INT; id->val = i++;
                 if (tk == ',') next();
@@ -1034,7 +1043,7 @@ void stmt(int ctx)
             ty = bt;
             // if the beginning of * is a pointer type, then type plus `PTR`
             // indicates what kind of pointer
-            while (tk == Mul) { next(); ty += PTR; }
+            while (tk == Mul) { next(); ty += PTR; } // ccc: type **ptr, .... 略過 * 
             switch (ctx) {
             case Glo:
                 if (tk != Id) fatal("bad global declaration");
@@ -1045,32 +1054,39 @@ void stmt(int ctx)
                 if (id->class >= ctx) fatal("duplicate local definition");
                 break;
             }
+
+            char fname[100]; strncpy(fname, id->name, id->nameLen); fname[id->nameLen] = '\0'; // add by ccc : 記住函數名稱
             next();
             id->type = ty;
-            if (tk == '(') { // function
+            if (tk == '(') { // function         ccc: int f(...
                 if (ctx != Glo) fatal("nested function");
                 id->class = Func; // type is functional
                 id->val = (int) (e + 1); // function Pointer? offset/address
                 id->type = ty;
-                next(); ld = 0;
-                while (tk != ')') { stmt(Par); if (tk == ',') next(); }
+                debug("def %s\n", fname); // ccc: 印出函數名稱
+                next(); ld = 0; // ccc: ld 是區域變數深度
+                while (tk != ')') {
+                    stmt(Par); /* ccc: 參數內的 stmt */
+                    if (tk == ',') next();
+                }
                 next();
                 if (tk != '{') fatal("bad function definition");
-                loc = ++ld;
+                loc = ++ld; // ccc: 參數數量+1 = loc
                 next();
                 // Not declare and must not be function, analyze inner block.
                 // e represents the address which will store pc
                 // (ld - loc) indicates memory size to allocate
                 *--n = ';';
                 while (tk != '}') {
-                    int *t = n; stmt(Loc);
+                    int *t = n; stmt(Loc); // ccc: 函數內的 stmt
                     if (t != n) { *--n = (int) t; *--n = '{'; }
                 }
-                *--n = ld - loc; *--n = Enter;
+                *--n = ld - loc; *--n = Enter; // ccc: ENT ld-loc 區域變數數量有 ld-loc 這麼多。
                 cas = 0;
-                gen(n);
-                id = sym; // unwind symbol table locals
-                while (id->tk) {
+                gen(n); // ccc: 產生本函數的 AST。
+                debug("-def %s\n", fname); // add by ccc: end of function
+                id = sym; // unwind symbol table locals // ccc: 把區域變數 class, type, val 設好。
+                while (id->tk) { // ccc: 搜尋該 id 為參數或區域變數嗎?
                     if (id->class == Loc || id->class == Par) {
                         id->class = id->hclass;
                         id->type = id->htype;
@@ -1096,6 +1112,7 @@ void stmt(int ctx)
             if (ctx != Par && tk == ',') next();
         }
         return;
+    // 感覺這裡的 a 位置不太對，但其實是對的，因為整個 ast 是倒過來長的 (類似 postfix ...)。
     /* if (...) <statement> [else <statement>]
      *     if (...)           <cond>
      *                        JZ a
@@ -1104,12 +1121,13 @@ void stmt(int ctx)
      * a:
      *     <statement>        <statement>
      * b:                     b:
+     * 
      */
     case If:
         next();
         if (tk == '(') next();
         else fatal("open paren expected");
-        expr(Assign); a = n;
+        expr(Assign); a = n; // ccc: a 為指標
         if (tk == ')') next();
         else fatal("close paren expected");
         stmt(ctx);
@@ -1238,9 +1256,6 @@ void stmt(int ctx)
 
 void die(char *msg) { printf("%s\n", msg); exit(-1); }
 
-int reloc_imm(int offset) { return ((((offset) - 8) >> 2) & 0x00ffffff); }
-int reloc_bl(int offset) { return 0xeb000000 | reloc_imm(offset); }
-
 int streq(char *p1, char *p2)
 {
     while (*p1 && *p1 == *p2) { ++p1; ++p2; }
@@ -1261,11 +1276,11 @@ int *codegen()
     debug("pc=%p e=%p\n", pc, e);
     while (pc <= e) {
         i = *pc;
-        pc++;
         if (i<=27) {
-            debug("%04d:%s", i, opName[i]);
+            debug("%p:%s", pc, opName[i]);
         } else
-            debug("%04d:", i);
+            debug("%p:op=%d", pc, i);
+        pc++;
         switch (i) {
         case LEA:
         case IMM:
@@ -1327,7 +1342,7 @@ int irgen()
 // enum { _O_CREAT = 64, _O_WRONLY = 1 };
 int main(int argc, char **argv)
 {
-    int *freed_ast, *ast;
+    int *freed_ast, *ast; // ast 整個是倒過來的，類似 postfix 的形式。
 
     int i;
 
@@ -1434,7 +1449,7 @@ int main(int argc, char **argv)
     next();
     n = ast;
     while (tk) {
-        stmt(Glo);
+        stmt(Glo); // ccc: 全域的 stmt
         next();
     }
     irgen();
@@ -2266,3 +2281,6 @@ int *codegen(int *jitmem, int *jitmap)
 #endif
 */
 
+
+// int reloc_imm(int offset) { return ((((offset) - 8) >> 2) & 0x00ffffff); }
+// int reloc_bl(int offset) { return 0xeb000000 | reloc_imm(offset); }
