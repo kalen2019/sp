@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <memory.h>
 
+FILE *sFile;
+
 char *freep, *p, *lp; // current position in source code
 char *freedata, *data, *_data;   // data/bss pointer
 char **scnames; // system call names
@@ -21,7 +23,7 @@ int loc;             // local variable offset
 int line;            // current line number
 int src;             // print source and assembly flag
 int signed_char;     // use `signed char` for `char`
-int elf;             // print ELF format
+// int elf;             // print ELF format
 int *n;              // current position in emitted abstract syntax tree
                      // With an AST, the compiler is not limited to generate
                      // code on the fly with parsing.
@@ -204,6 +206,37 @@ enum {
     /* system call shortcuts */
     OPEN,READ,WRIT,CLOS,PRTF,MALC,FREE,MSET,MCMP,MCPY,MMAP,DSYM,BSCH,STRT,DLOP,DIV,MOD,EXIT,
     CLCA /* clear cache, used by JIT compilation */
+};
+
+char *opName[] = {
+    "LEA", /*  0 */
+    "IMM", /*  1 */
+    "JMP", /*  2 */
+    "JSR", /*  3 */
+    "BZ", /*  4 : conditional jump if general register is zero */
+    "BNZ", /*  5 : conditional jump if general register is not zero */
+    "ENT", /*  6 */
+    "ADJ", /*  7 */
+    "LEV", /*  8 */
+    "LI", /*  9 */
+    "LC", /* 10 */
+    "SI", /* 11 */
+    "SC", /* 12 */
+    "PSH", /* 13 */
+    "OR", /* 14 */
+    "XOR", /* 15 */
+    "AND", /* 16 */
+    "EQ", /* 17 */
+    "NE", /* 18 */
+    "LT", /* 19 */
+    "GT", /* 20 */
+    "LE", /* 21 */
+    "GE", /* 22 */
+    "SHL", /* 23 */
+    "SHR", /* 24 */
+    "ADD", /* 25 */
+    "SUB", /* 26 */
+    "MUL" /* 27 */
 };
 
 // types
@@ -754,6 +787,9 @@ void expr(int lev)
     }
 }
 
+#define emit(...) fprintf(sFile, __VA_ARGS__); fprintf(sFile, "\n")
+#define debug(...) printf(__VA_ARGS__)
+
 // AST parsing for IR generatiion
 // With a modular code generator, new targets can be easily supported such as
 // native Arm machine code.
@@ -788,6 +824,7 @@ void gen(int *n)
         *++e = (n[1] == CHAR) ? SC : SI;
         break;
     case Cond: // if else condition case
+    // ccc: 如果語句 -- if condition expression elsestmt
         gen((int *) n[1]); // condition
         *++e = BZ; b = ++e;
         gen((int *) n[2]); // expression
@@ -1210,11 +1247,88 @@ int streq(char *p1, char *p2)
     return (*p1 > *p2) == (*p2  > *p1);
 }
 
+int *codegen()
+{
+    int i, tmp;
+    int *immloc, *il;
+    immloc = il = malloc(1024 * 4);
+    int *iv = malloc(1024 * 4);
+    int *imm0 = 0;
+    int *pc = text + 1; line = 0;
+    char name[100];
+
+    debug("LEA=%d LI=%d OPEN=%d EXIT=%d\n", LEA, LI, OPEN, EXIT);
+    debug("pc=%p e=%p\n", pc, e);
+    while (pc <= e) {
+        i = *pc;
+        pc++;
+        if (i<=27) {
+            debug("%04d:%s", i, opName[i]);
+        } else
+            debug("%04d:", i);
+        switch (i) {
+        case LEA:
+        case IMM:
+        case JSR:
+        case JMP:
+        case BZ:
+        case BNZ:
+        case ENT:
+        case ADJ:
+            tmp = *pc++;
+            debug(" %d", tmp);
+            break;
+        case LEV:
+        case LI:
+        case LC:
+        case SI:
+        case SC:
+        case PSH:
+        case OR:
+        case XOR:
+        case AND:
+        case SHL:
+        case SHR:
+        case ADD:
+        case SUB:
+        case MUL:
+        case DIV:
+        case MOD:
+        case CLCA:
+            break;
+        default:
+            if (EQ <= i && i <= GE) {
+                break;
+            }
+            else if (i >= OPEN && i <= EXIT) {
+                if (*pc++ != ADJ) die("codegen: no ADJ after native proc");
+                i = *pc; // 參數個數
+                if (i > 10) die("codegen: no support for 10+ arguments");
+                while (i > 0) --i;
+                i = *pc++; // 區域變數個數
+                break;
+            }
+            else {
+                printf("code generation failed for %d!\n", i);
+                free(iv);
+                return 0;
+            }
+        }
+        debug("\n");
+    }
+    return 0;
+}
+
+int irgen()
+{
+    if (!codegen()) return 1;
+    return 0;
+}
 // enum { _O_CREAT = 64, _O_WRONLY = 1 };
 int main(int argc, char **argv)
 {
     int *freed_ast, *ast;
-    FILE *sFile;
+
     int i;
 
     --argc; ++argv;
@@ -1225,8 +1339,10 @@ int main(int argc, char **argv)
         signed_char = 1; --argc; ++argv;
     }
     if (argc > 0 && **argv == '-' && (*argv)[1] == 'o') {
-        elf = 1; --argc; ++argv;
+        // elf = 1; 
+        --argc; ++argv;
         if (argc < 1) die("no output file argument");
+        debug("output file=%s\n", *argv);
         if ((sFile = fopen(*argv, "wt")) < 0) {
             printf("could not open(%s)\n", *argv); return -1;
         }
@@ -1234,6 +1350,7 @@ int main(int argc, char **argv)
     }
     if (argc < 1) die("usage: ircc [-s] [-o object] file");
 
+    debug("cFile=%s\n", *argv);
     FILE *cFile;
     if ((cFile = fopen(*argv, "r")) < 0) {
         printf("could not open(%s)\n", *argv); return -1;
@@ -1320,15 +1437,15 @@ int main(int argc, char **argv)
         stmt(Glo);
         next();
     }
-
+    irgen();
 //    int ret = elf ? elf32(poolsz, (int *) idmain->val, elf_fd) :
 //                    jit(poolsz,   (int *) idmain->val, argc, argv);
-
     free(freep);
     free(freedata);
     free(text);
     free(sym);
     free(freed_ast);
+    fclose(sFile);
     // return ret;
 }
 
