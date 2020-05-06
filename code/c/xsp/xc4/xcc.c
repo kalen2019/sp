@@ -8,7 +8,7 @@
 // Written by Robert Swierczek
 
 char *p, *lp, // current position in source code (p: 目前原始碼指標, lp: 上一行原始碼指標)
-     *data;   // data/bss pointer (資料段機器碼指標)
+     *dp, *data; // data: 資料段起點, dp: data/bss pointer (資料段機器碼指標)
 
 int *code,    // ccc: add *code (程式段)
     *e, *le,  // current position in emitted code (e: 目前機器碼指標, le: 上一行機器碼指標)
@@ -78,15 +78,15 @@ void next() // 詞彙解析 lexer
       }
     }
     else if (tk == '\'' || tk == '"') { // 字元或字串
-      pp = data;
+      pp = dp;
       while (*p != 0 && *p != tk) {
         if ((ival = *p++) == '\\') {
           if ((ival = *p++) == 'n') ival = '\n'; // 處理 \n 的特殊情況
         }
-        if (tk == '"') *data++ = ival; // 把字串塞到資料段裏
+        if (tk == '"') *dp++ = ival; // 把字串塞到資料段裏
       }
       ++p;
-      if (tk == '"') ival = (int)pp; else tk = Num; // (若是字串) ? (ival = 字串 (在資料段中的) 指標) : (字元值)
+      if (tk == '"') { ival = (int)pp; *dp++='\0'; /*結尾字元*/ } else tk = Num; // (若是字串) ? (ival = 字串 (在資料段中的) 指標) : (字元值)
       return;
     } // 以下為運算元 =+-!<>|&^%*[?~, ++, --, !=, <=, >=, ||, &&, ~  ;{}()],:
     else if (tk == '=') { if (*p == '=') { ++p; tk = Eq; } else tk = Assign; return; }
@@ -115,7 +115,7 @@ void expr(int lev) // 運算式 expression, 其中 lev 代表優先等級
   else if (tk == '"') { // 字串
     *++e = IMM; *++e = ival; next();
     while (tk == '"') next();
-    data = (char *)((int)data + sizeof(int) & -sizeof(int)); ty = PTR; // 用 int 為大小對齊 ??
+    dp = (char *)((int)dp + sizeof(int) & -sizeof(int)); ty = PTR; // 用 int 為大小對齊 ??
   }
   else if (tk == Sizeof) { // 處理 sizeof(type) ，其中 type 可能為 char, int 或 ptr
     next(); if (tk == '(') next(); else { printf("%d: open paren expected in sizeof\n", line); exit(-1); }
@@ -394,10 +394,10 @@ int prog() { // 編譯整個程式 Program
           id = id + Idsz;
         }
       }
-      else {
+      else { // 不是函數，那就是全域變數，data 段留一個 int 給它。
         id[Class] = Glo;
-        id[Val] = (int)data;
-        data = data + sizeof(int);
+        id[Val] = (int)dp;
+        dp = dp + sizeof(int);
       }
       if (tk == ',') next();
     }
@@ -420,9 +420,9 @@ int main(int argc, char **argv) // 主程式
   if ((fd = open(*argv, 0)) < 0) { printf("could not open(%s)\n", *argv); return -1; }
 
   if (!(sym = malloc(poolsz))) { printf("could not malloc(%d) symbol area\n", poolsz); return -1; } // 符號段
-  if (!(code = le = e = malloc(poolsz))) { printf("could not malloc(%d) text area\n", poolsz); return -1; } // 程式段
-  if (!(data = malloc(poolsz))) { printf("could not malloc(%d) data area\n", poolsz); return -1; } // 資料段
-
+  if (!(code = malloc(poolsz))) { printf("could not malloc(%d) text area\n", poolsz); return -1; } // 程式段
+  if (!(data = dp = malloc(poolsz))) { printf("could not malloc(%d) data area\n", poolsz); return -1; } // 資料段
+  le = e = code-1; // 因為都用 *++e=....，所以要先減一，才能塞到第0格。
   memset(sym,  0, poolsz);
   memset(code, 0, poolsz);
   memset(data, 0, poolsz);

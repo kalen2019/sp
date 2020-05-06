@@ -1,14 +1,25 @@
 #include "xcc.h"
 
 int xobj_dump(Obj *obj) { // 虛擬機 => pc: 程式計數器, sp: 堆疊暫存器, bp: 框架暫存器
-  printf("codeLen = %d\n", obj->codeLen);
+  printf("codeLen = %d obj->data=%p\n", obj->codeLen, obj->data);
   // int *pc = obj->code;
-  int ci = 1, *pc = obj->code+1; // 第 0 個沒放指令，因為都用 *++e=....。
-  while (ci < obj->codeLen) {
+  int *pc = obj->code; // 第 0 個沒放指令，因為都用 *++e=....。
+  while (1) {
+    int ci = pc - obj->code;
     int i = *pc++;
-    printf("%d: %.4s", ci++, &OP[i * 5]);
-    if (i <= ADJ) { printf(" %d\n", *pc++); ci++; } else printf("\n");
+    if (ci >= obj->codeLen) break;
+    printf("%d: %.4s", ci, &OP[i * 5]);
+    if (i == IMM) {
+      char *immp = (char*) *pc;
+      if (immp >= obj->data && immp < obj->data + poolsz) { // 立即值，資料段中的指標。
+        // 改為目的檔中資料段的位置存檔。
+      } else if (i >= JMP && i<= BNZ) { // JMP ,JSR ,BZ  ,BNZ
+        // 改為目的檔中程式段的位置存檔。
+      } 
+    }
+    if (i <= ADJ) printf(" %d\n", *pc++); else printf("\n");
   }
+  // 接著對 symTable 存檔。(包含存字串表)。
 }
 
 int saveObj(Obj *obj) { 
