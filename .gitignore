@@ -15,12 +15,10 @@
 *.exe
 *.exe.stackdump
 *.hack
-*.bin
+# *.bin
 *.o
 *.zip
 a.out
-
-!code/c/03-asmVm/hack/c/qvm/*.bin
 
 .nyc_output
 
