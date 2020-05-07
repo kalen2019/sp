@@ -10,10 +10,11 @@
 char *p, *lp, // current position in source code (p: 目前原始碼指標, lp: 上一行原始碼指標)
      *dp, *data; // data: 資料段起點, dp: data/bss pointer (資料段機器碼指標)
 
+ID *id, *sym;        // currently parsed identifier (id: 目前的 id)
 int *code,    // ccc: add *code (程式段)
     *e, *le,  // current position in emitted code (e: 目前機器碼指標, le: 上一行機器碼指標)
-    *id,      // currently parsed identifier (id: 目前的 id)
-    *sym,     // symbol table (simple list of identifiers) (符號表)
+    // *id,      // currently parsed identifier (id: 目前的 id)
+    // *sym,     // symbol table (simple list of identifiers) (符號表)
     tk,       // current token (目前 token)
     ival,     // current token value (目前的 token 值)
     ty,       // current expression type (目前的運算式型態)
@@ -47,14 +48,15 @@ void next() // 詞彙解析 lexer
       while ((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z') || (*p >= '0' && *p <= '9') || *p == '_')
         tk = tk * 147 + *p++;  // 計算雜湊值
       tk = (tk << 6) + (p - pp); // 符號表的雜湊位址 ??
-      id = sym;
-      while (id[Tk]) { // 檢查是否碰撞 ?
-        if (tk == id[Hash] && !memcmp((char *)id[Name], pp, p - pp)) { tk = id[Tk]; return; } // 沒碰撞就傳回 token
-        id = id + Idsz; // 碰撞，前進到下一格。
+      id = sym; // bug : 這裡有問題?
+      while (id->tk) { // 檢查該符號是否已經存在 ? (循序搜尋?)
+        if (tk == id->hash && !memcmp(id->name, pp, p - pp)) { tk = id->tk; return; } // 若已經存在就傳回該 id, tk
+        id++; // = id + Idsz; // 碰撞，前進到下一格。
       }
-      id[Name] = (int)pp; // id.Name = ptr(變數名稱)
-      id[Hash] = tk; // id.Hash = 雜湊值
-      tk = id[Tk] = Id; // token = id.Tk = Id
+      id->name = pp; // id->name = ptr(變數名稱)
+      // printf("%.*s\n", p-pp, id->name);
+      id->hash = tk; // id->hash = 雜湊值
+      tk = id->tk = Id; // token = id->tk = Id
       return;
     }
     else if (tk >= '0' && tk <= '9') { // 取得數字串
@@ -126,25 +128,25 @@ void expr(int lev) // 運算式 expression, 其中 lev 代表優先等級
     ty = INT;
   }
   else if (tk == Id) { // 處理 id ...
-    d = id; next();
+    ID *d = id; next();
     if (tk == '(') { // id (args) ，這是 call
       next();
       t = 0;
       while (tk != ')') { expr(Assign); *++e = PSH; ++t; if (tk == ',') next(); } // 推入 arg
       next();
-      // d[Class] 可能為 Num = 128, Fun, Sys, Glo, Loc, ...
-      if (d[Class] == Sys) *++e = d[Val]; // token 是系統呼叫 ???
-      else if (d[Class] == Fun) { *++e = JSR; *++e = d[Val]; } // token 是自訂函數，用 JSR : jump to subroutine 指令呼叫
-      else { printf("%d: bad function call\n", line); exit(-1); }
+      // d.class 可能為 Num = 128, Fun, Sys, Glo, Loc, ...
+      if (d->class == Sys) *++e = d->val; // token 是系統呼叫 ???
+      else if (d->class == Fun) { *++e = JSR; *++e = d->val; } // token 是自訂函數，用 JSR : jump to subroutine 指令呼叫
+      else { printf("%d: bad function call\n", line); exit(-1); } // Fun 是 129
       if (t) { *++e = ADJ; *++e = t; } // 有參數，要調整堆疊  (ADJ : stack adjust)
-      ty = d[Type];
+      ty = d->type;
     }
-    else if (d[Class] == Num) { *++e = IMM; *++e = d[Val]; ty = INT; } // 該 id 是數值
+    else if (d->class == Num) { *++e = IMM; *++e = d->val; ty = INT; } // 該 d 是數值
     else {
-      if (d[Class] == Loc) { *++e = LEA; *++e = loc - d[Val]; } // 該 id 是區域變數，載入區域變數 (LEA : load local address)
-      else if (d[Class] == Glo) { *++e = IMM; *++e = d[Val]; }  // 該 id 是全域變數，載入該全域變數 (IMM : load global address or immediate 載入全域變數或立即值)
+      if (d->class == Loc) { *++e = LEA; *++e = loc - d->val; } // 該 d 是區域變數，載入區域變數 (LEA : load local address)
+      else if (d->class == Glo) { *++e = IMM; *++e = d->val; }  // 該 d 是全域變數，載入該全域變數 (IMM : load global address or immediate 載入全域變數或立即值)
       else { printf("%d: undefined variable\n", line); exit(-1); }
-      *++e = ((ty = d[Type]) == CHAR) ? LC : LI; // LI  : load int, LC  : load char
+      *++e = ((ty = d->type) == CHAR) ? LC : LI; // LI  : load int, LC  : load char
     }
   }
   else if (tk == '(') { // (E) : 有括號的運算式 ...
@@ -329,7 +331,7 @@ int prog() { // 編譯整個程式 Program
             i = ival;
             next();
           }
-          id[Class] = Num; id[Type] = INT; id[Val] = i++;
+          id->class = Num; id->type = INT; id->val = i++;
           if (tk == ',') next();
         }
         next();
@@ -339,12 +341,12 @@ int prog() { // 編譯整個程式 Program
       ty = bt;
       while (tk == Mul) { next(); ty = ty + PTR; }
       if (tk != Id) { printf("%d: bad global declaration\n", line); return -1; }
-      if (id[Class]) { printf("%d: duplicate global definition\n", line); return -1; } // id.Class 已經存在，重複宣告了！
+      if (id->class) { printf("%d: duplicate global definition\n", line); return -1; } // id->class 已經存在，重複宣告了！
       next();
-      id[Type] = ty;
+      id->type = ty;
       if (tk == '(') { // function 函數定義 ex: int f( ...
-        id[Class] = Fun;
-        id[Val] = (int)(e + 1);
+        id->class = Fun;
+        id->val = (int)(e + 1);
         next(); i = 0;
         while (tk != ')') { // 掃描參數直到 ...)
           ty = INT;
@@ -352,11 +354,11 @@ int prog() { // 編譯整個程式 Program
           else if (tk == Char) { next(); ty = CHAR; }
           while (tk == Mul) { next(); ty = ty + PTR; }
           if (tk != Id) { printf("%d: bad parameter declaration\n", line); return -1; }
-          if (id[Class] == Loc) { printf("%d: duplicate parameter definition\n", line); return -1; } // 這裡的 id 會指向 hash 搜尋過的 symTable 裏的那個 (在 next 裏處理的)，所以若是該 id 已經是 Local，那麼就重複了！
-          // 把 id.Class, id.Type, id.Val 暫存到 id.HClass, id.HType, id.Hval ，因為 Local 優先於 Global
-          id[HClass] = id[Class]; id[Class] = Loc;
-          id[HType]  = id[Type];  id[Type] = ty;
-          id[HVal]   = id[Val];   id[Val] = i++;
+          if (id->class == Loc) { printf("%d: duplicate parameter definition\n", line); return -1; } // 這裡的 id 會指向 hash 搜尋過的 symTable 裏的那個 (在 next 裏處理的)，所以若是該 id 已經是 Local，那麼就重複了！
+          // 把 id->Class, id->Type, id->Val 暫存到 id->HClass, id->HType, id->Hval ，因為 Local 優先於 Global
+          id->hclass = id->class; id->class = Loc;
+          id->htype  = id->type;  id->type = ty;
+          id->hval   = id->val;   id->val = i++;
           next();
           if (tk == ',') next();
         }
@@ -371,11 +373,11 @@ int prog() { // 編譯整個程式 Program
             ty = bt;
             while (tk == Mul) { next(); ty = ty + PTR; }
             if (tk != Id) { printf("%d: bad local declaration\n", line); return -1; }
-            if (id[Class] == Loc) { printf("%d: duplicate local definition\n", line); return -1; }
-            // 把 id.Class, id.Type, id.Val 暫存到 id.HClass, id.HType, id.Hval ，因為 Local 優先於 Global
-            id[HClass] = id[Class]; id[Class] = Loc;
-            id[HType]  = id[Type];  id[Type] = ty;
-            id[HVal]   = id[Val];   id[Val] = ++i;
+            if (id->class == Loc) { printf("%d: duplicate local definition\n", line); return -1; }
+            // 把 id->Class, id->Type, id->Val 暫存到 id->HClass, id->HType, id->Hval ，因為 Local 優先於 Global
+            id->hclass = id->class; id->class = Loc;
+            id->htype  = id->type;  id->type = ty;
+            id->hval   = id->val;   id->val = ++i;
             next();
             if (tk == ',') next();
           }
@@ -385,18 +387,18 @@ int prog() { // 編譯整個程式 Program
         while (tk != '}') stmt();
         *++e = LEV; // 離開函數，呼叫 LEV。
         id = sym; // unwind symbol table locals (把被區域變數隱藏掉的那些 Local id 還原，恢復全域變數的符號定義)
-        while (id[Tk]) {
-          if (id[Class] == Loc) {
-            id[Class] = id[HClass];
-            id[Type] = id[HType];
-            id[Val] = id[HVal];
+        while (id->tk) {
+          if (id->class == Loc) {
+            id->class = id->hclass;
+            id->type = id->htype;
+            id->val = id->hval;
           }
-          id = id + Idsz;
+          id++; //  = id + Idsz;
         }
       }
       else { // 不是函數，那就是全域變數，data 段留一個 int 給它。
-        id[Class] = Glo;
-        id[Val] = (int)dp;
+        id->class = Glo;
+        id->val = (int)dp;
         dp = dp + sizeof(int);
       }
       if (tk == ',') next();
@@ -408,9 +410,8 @@ int prog() { // 編譯整個程式 Program
 
 int main(int argc, char **argv) // 主程式
 {
-  int fd, *idmain; // ty, 
-  int *pc; // *bp, *sp 
-  int i;
+  int fd, *pc, i;
+  ID *idmain;
 
   --argc; ++argv;
   if (argc > 0 && **argv == '-' && (*argv)[1] == 's') { src = 1; --argc; ++argv; }
@@ -429,10 +430,10 @@ int main(int argc, char **argv) // 主程式
 
   p = "char else enum if int return sizeof while "
       "open read close printf malloc free memset memcmp exit void main";
-  i = Char; while (i <= While) { next(); id[Tk] = i++; } // add keywords to symbol table
-  i = OPEN; while (i <= EXIT) { next(); id[Class] = Sys; id[Type] = INT; id[Val] = i++; } // add library to symbol table
+  i = Char; while (i <= While) { next(); id->tk = i++; } // add keywords to symbol table
+  i = OPEN; while (i <= EXIT) { next(); id->class = Sys; id->type = INT; id->val = i++; } // add library to symbol table
   // 接下來處理 void main 的宣告。
-  next(); id[Tk] = Char; // handle void type
+  next(); id->tk = Char; // handle void type
   next(); idmain = id; // keep track of main
 
   if (!(lp = p = malloc(poolsz))) { printf("could not malloc(%d) source area\n", poolsz); return -1; } // 原始程式碼 filename.c 的空間
@@ -442,7 +443,7 @@ int main(int argc, char **argv) // 主程式
 
   if (prog() == -1) return -1;
 
-  if (!(pc = (int *)idmain[Val])) { printf("main() not defined\n"); return -1; }
+  if (!(pc = (int *)idmain->val)) { printf("main() not defined\n"); return -1; }
   if (src) return 0;
 
   if (debug) {
