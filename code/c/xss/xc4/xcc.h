@@ -21,8 +21,8 @@ extern int debug;
 char *data;   // data/bss pointer (資料段機器碼指標)
 int *code,    // ccc: add *code (程式段)
     *sym;     // symbol table (simple list of identifiers) (符號表)
-int xvm_main(int *pc, int *bp, int *sp, int argc, char *argv[]);
-int xobj_dump(Obj *obj);
+int xvm_main(int *pc, int argc, char *argv[]);
+void xobj_dump(Obj *obj);
 
 #define poolsz 256*1024 // arbitrary size
 
@@ -43,6 +43,7 @@ enum { CHAR, INT, PTR };
 
 // 因為沒有 struct，所以使用 offset 代替，例如 id[Tk] 代表 id.Tk (token), id[Hash] 代表 id.Hash, id[Name] 代表 id.Name, .....
 // identifier offsets (since we can't create an ident struct)
+
 enum { Tk, Hash, Name, Class, Type, Val, HClass, HType, HVal, Idsz }; // HClass, HType, HVal 是暫存的備份 ???
 
 

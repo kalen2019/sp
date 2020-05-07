@@ -56,9 +56,10 @@ int run(int *pc, int *bp, int *sp) { // 虛擬機 => pc: 程式計數器, sp: �
   }
 }
 
-int xvm_main(int *pc, int *bp, int *sp, int argc, char *argv[]) {
-  if (!(sp = malloc(poolsz))) { printf("could not malloc(%d) stack area\n", poolsz); return -1; }  // 堆疊段
+int xvm_main(int *pc, int argc, char *argv[]) {
+  int *bp, *sp;
   // setup stack
+  if (!(sp = malloc(poolsz))) { printf("could not malloc(%d) stack area\n", poolsz); return -1; }  // 堆疊段
   bp = sp = (int *)((int)sp + poolsz);
   *--sp = EXIT; // call exit if main returns
   *--sp = PSH;
@@ -67,6 +68,7 @@ int xvm_main(int *pc, int *bp, int *sp, int argc, char *argv[]) {
   *--sp = (int)argv;
   *--sp = (int)t;
   run(pc, bp, sp);
+  return 0;
 }
 
 /*

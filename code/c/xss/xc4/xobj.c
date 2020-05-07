@@ -1,6 +1,6 @@
 #include "xcc.h"
 
-int xobj_dump(Obj *obj) { // 虛擬機 => pc: 程式計數器, sp: 堆疊暫存器, bp: 框架暫存器
+void xobj_dump(Obj *obj) { // 虛擬機 => pc: 程式計數器, sp: 堆疊暫存器, bp: 框架暫存器
   printf("codeLen = %d obj->data=%p\n", obj->codeLen, obj->data);
   // int *pc = obj->code;
   int *pc = obj->code; // 第 0 個沒放指令，因為都用 *++e=....。
@@ -22,6 +22,8 @@ int xobj_dump(Obj *obj) { // 虛擬機 => pc: 程式計數器, sp: 堆疊暫存�
   // 接著對 symTable 存檔。(包含存字串表)。
 }
 
+/*
+
 int saveObj(Obj *obj) { 
   
 }
@@ -29,3 +31,4 @@ int saveObj(Obj *obj) {
 int loadObj(Obj *obj) {
 
 }
+*/

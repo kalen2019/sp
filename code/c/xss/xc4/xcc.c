@@ -26,7 +26,7 @@ void next() // 詞彙解析 lexer
 {
   char *pp;
 
-  while (tk = *p) {
+  while ((tk = *p)) {
     ++p;
     if (tk == '\n') { // 換行
       if (src) {
@@ -58,7 +58,7 @@ void next() // 詞彙解析 lexer
       return;
     }
     else if (tk >= '0' && tk <= '9') { // 取得數字串
-      if (ival = tk - '0') { while (*p >= '0' && *p <= '9') ival = ival * 10 + *p++ - '0'; } // 十進位
+      if ((ival = tk - '0')) { while (*p >= '0' && *p <= '9') ival = ival * 10 + *p++ - '0'; } // 十進位
       else if (*p == 'x' || *p == 'X') { // 十六進位
         while ((tk = *++p) && ((tk >= '0' && tk <= '9') || (tk >= 'a' && tk <= 'f') || (tk >= 'A' && tk <= 'F'))) // 16 進位
           ival = ival * 16 + (tk & 15) + (tk >= 'A' ? 9 : 0);
@@ -115,7 +115,7 @@ void expr(int lev) // 運算式 expression, 其中 lev 代表優先等級
   else if (tk == '"') { // 字串
     *++e = IMM; *++e = ival; next();
     while (tk == '"') next();
-    dp = (char *)((int)dp + sizeof(int) & -sizeof(int)); ty = PTR; // 用 int 為大小對齊 ??
+    dp = (char *)(((int)dp + sizeof(int)) & -sizeof(int)); ty = PTR; // 用 int 為大小對齊 ??
   }
   else if (tk == Sizeof) { // 處理 sizeof(type) ，其中 type 可能為 char, int 或 ptr
     next(); if (tk == '(') next(); else { printf("%d: open paren expected in sizeof\n", line); exit(-1); }
@@ -408,8 +408,8 @@ int prog() { // 編譯整個程式 Program
 
 int main(int argc, char **argv) // 主程式
 {
-  int fd, ty, *idmain;
-  int *pc, *bp, *sp;
+  int fd, *idmain; // ty, 
+  int *pc; // *bp, *sp 
   int i;
 
   --argc; ++argv;
@@ -450,5 +450,5 @@ int main(int argc, char **argv) // 主程式
     xobj_dump(&obj);
   }
 
-  xvm_main(pc, bp, sp, argc, argv);
+  xvm_main(pc, argc, argv);
 }
