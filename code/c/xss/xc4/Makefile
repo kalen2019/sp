@@ -1,5 +1,5 @@
 CC := gcc
-CFLAGS = -Wall -std=c99 -O0
+CFLAGS = -m32 -Wall -std=c99 -O0
 TARGET = xcc xvm
 
 all: $(TARGET)
@@ -11,4 +11,4 @@ xvm: xvm.c xobj.c
 	$(CC) $(CFLAGS) $^ -o $@
 
 clean:
-	rm -f *.o *.exe
+	rm -f *.o $(TARGET)
