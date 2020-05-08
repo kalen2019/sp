@@ -7,14 +7,13 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-// 因為沒有 struct，所以使用 offset 代替，例如 id[Tk] 代表 id.Tk (token), id[Hash] 代表 id.Hash, id[Name] 代表 id.Name, .....
-// identifier offsets (since we can't create an ident struct)
-
 typedef struct _ID {
   int tk, hash, class, type, val, hclass, htype, hval; // , idsz;
   char *name; 
 } ID;
 
+// 因為沒有 struct，所以使用 offset 代替，例如 id[Tk] 代表 id.Tk (token), id[Hash] 代表 id.Hash, id[Name] 代表 id.Name, .....
+// identifier offsets (since we can't create an ident struct)
 // enum { Tk, Hash, Name, Class, Type, Val, HClass, HType, HVal, Idsz }; // HClass, HType, HVal 是暫存的備份 ???
 
 typedef struct _Obj {
@@ -24,7 +23,7 @@ typedef struct _Obj {
   char *data;
 } Obj;
 
-extern int debug;
+extern int debug; 
 char *data;   // data/bss pointer (資料段機器碼指標)
 int *code;    // ccc: add *code (程式段)
 ID *sym;     // symbol table (simple list of identifiers) (符號表)
@@ -49,5 +48,5 @@ enum { LEA ,IMM ,JMP ,JSR ,BZ  ,BNZ ,ENT ,ADJ ,LEV ,LI  ,LC  ,SI  ,SC  ,PSH ,
 
 // types (支援型態，只有 int, char, pointer)
 enum { CHAR, INT, PTR };
-
+extern char *types[];
 #endif

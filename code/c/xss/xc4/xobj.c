@@ -1,7 +1,9 @@
 #include "xcc.h"
 
+char *types[] = {"char", "int", "ptr", "char*", "int*", "ptr*" };
+
 void xobj_dump(Obj *obj) { // 虛擬機 => pc: 程式計數器, sp: 堆疊暫存器, bp: 框架暫存器
-  printf("codeLen = %d obj->data=%p\n", obj->codeLen, obj->data);
+  // printf("codeLen = %d obj->data=%p\n", obj->codeLen, obj->data);
   // int *pc = obj->code;
   int *pc = obj->code; // 第 0 個沒放指令，因為都用 *++e=....。
   while (1) {
@@ -20,6 +22,12 @@ void xobj_dump(Obj *obj) { // 虛擬機 => pc: 程式計數器, sp: 堆疊暫存
     if (i <= ADJ) printf(" %d\n", *pc++); else printf("\n");
   }
   // 接著對 symTable 存檔。(包含存字串表)。
+  ID *id = sym;
+  while (id->tk) { // 檢查該符號是否已經存在 ? (循序搜尋?)
+    if (id->class != Loc && id->class != 0) // 單純區域變數 (沒有同名的全域)，不須存放在符號表內了！ (注意，其 type, class 已經被還原了，所以 type 不正確。)
+      printf("name=%.10s type=%s htype=%s val=%d\n", id->name, types[id->type], types[id->htype], id->val);
+    id++;
+  }
 }
 
 /*

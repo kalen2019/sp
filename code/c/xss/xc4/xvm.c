@@ -1,6 +1,6 @@
 #include "xcc.h"
 
-int run(int *pc, int *bp, int *sp) { // 虛擬機 => pc: 程式計數器, sp: 堆疊暫存器, bp: 框架暫存器
+int xvm_run(int *pc, int *bp, int *sp) { // 虛擬機 => pc: 程式計數器, sp: 堆疊暫存器, bp: 框架暫存器
   int a, cycle; // a: 累積器, cycle: 執行指令數
   int i, *t;    // temps
 
@@ -67,7 +67,7 @@ int xvm_main(int *pc, int argc, char *argv[]) {
   *--sp = argc;
   *--sp = (int)argv;
   *--sp = (int)t;
-  run(pc, bp, sp);
+  xvm_run(pc, bp, sp);
   return 0;
 }
 

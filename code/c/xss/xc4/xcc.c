@@ -20,8 +20,10 @@ int *code,    // ccc: add *code (程式段)
     ty,       // current expression type (目前的運算式型態)
     loc,      // local variable offset (區域變數的位移)
     line,     // current line number (目前行號)
-    src,      // print source and assembly flag (印出原始碼)
-    debug;    // print executed instructions (印出執行指令 -- 除錯模式)
+    src=0,      // print source and assembly flag (印出原始碼)
+    debug=0,    // print executed instructions (印出執行指令 -- 除錯模式)
+    run=0,      // run code. (執行程式) (add by ccc)
+    obj=0;      // output obj file. (輸出目的檔) (add by ccc)
 
 void next() // 詞彙解析 lexer
 {
@@ -338,7 +340,7 @@ int prog() { // 編譯整個程式 Program
       }
     }
     while (tk != ';' && tk != '}') { // 掃描直到區塊結束
-      ty = bt;
+      ty = bt; // bt: basetype
       while (tk == Mul) { next(); ty = ty + PTR; }
       if (tk != Id) { printf("%d: bad global declaration\n", line); return -1; }
       if (id->class) { printf("%d: duplicate global definition\n", line); return -1; } // id->class 已經存在，重複宣告了！
@@ -352,13 +354,14 @@ int prog() { // 編譯整個程式 Program
           ty = INT;
           if (tk == Int) next();
           else if (tk == Char) { next(); ty = CHAR; }
-          while (tk == Mul) { next(); ty = ty + PTR; }
+          while (tk == Mul) { next(); ty = ty + PTR; } // ty+PTR => ty*
           if (tk != Id) { printf("%d: bad parameter declaration\n", line); return -1; }
           if (id->class == Loc) { printf("%d: duplicate parameter definition\n", line); return -1; } // 這裡的 id 會指向 hash 搜尋過的 symTable 裏的那個 (在 next 裏處理的)，所以若是該 id 已經是 Local，那麼就重複了！
           // 把 id->Class, id->Type, id->Val 暫存到 id->HClass, id->HType, id->Hval ，因為 Local 優先於 Global
           id->hclass = id->class; id->class = Loc;
           id->htype  = id->type;  id->type = ty;
           id->hval   = id->val;   id->val = i++;
+          printf("name=%.10s type=%s val=%d\n", id->name, types[id->type], id->val); // ccc:debug
           next();
           if (tk == ',') next();
         }
@@ -378,6 +381,7 @@ int prog() { // 編譯整個程式 Program
             id->hclass = id->class; id->class = Loc;
             id->htype  = id->type;  id->type = ty;
             id->hval   = id->val;   id->val = ++i;
+            printf("name=%.10s type=%s val=%d\n", id->name, types[id->type], id->val); // ccc:debug
             next();
             if (tk == ',') next();
           }
@@ -387,6 +391,8 @@ int prog() { // 編譯整個程式 Program
         while (tk != '}') stmt();
         *++e = LEV; // 離開函數，呼叫 LEV。
         id = sym; // unwind symbol table locals (把被區域變數隱藏掉的那些 Local id 還原，恢復全域變數的符號定義)
+        // ccc: 在這裡 symTable 的東西又被還原了，所以區域變數的型態就忘記了。
+        // ccc: 問題是符號表裡只要記全域變數的型態，不需要記區域變數的型態。
         while (id->tk) {
           if (id->class == Loc) {
             id->class = id->hclass;
@@ -416,7 +422,9 @@ int main(int argc, char **argv) // 主程式
   --argc; ++argv;
   if (argc > 0 && **argv == '-' && (*argv)[1] == 's') { src = 1; --argc; ++argv; }
   if (argc > 0 && **argv == '-' && (*argv)[1] == 'd') { debug = 1; --argc; ++argv; }
-  if (argc < 1) { printf("usage: xcc [-s] [-d] file ...\n"); return -1; }
+  if (argc > 0 && **argv == '-' && (*argv)[1] == 'r') { run = 1; --argc; ++argv; } // run: add by ccc
+  if (argc > 0 && **argv == '-' && (*argv)[1] == 'o') { obj = 1; --argc; ++argv; } // obj: add by ccc
+  if (argc < 1) { printf("usage: xcc [-s] [-d] [-r] file ...\n"); return -1; }
 
   if ((fd = open(*argv, 0)) < 0) { printf("could not open(%s)\n", *argv); return -1; }
 
@@ -446,10 +454,9 @@ int main(int argc, char **argv) // 主程式
   if (!(pc = (int *)idmain->val)) { printf("main() not defined\n"); return -1; }
   if (src) return 0;
 
-  if (debug) {
+  if (obj) {
     Obj obj = {.code=code, .data=data, .sym=sym, .codeLen=e-code };
     xobj_dump(&obj);
   }
-
-  xvm_main(pc, argc, argv);
+  if (run || debug) xvm_main(pc, argc, argv);
 }
