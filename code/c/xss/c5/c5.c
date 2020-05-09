@@ -439,7 +439,8 @@ int xvm_run(int *pc, int *bp, int *sp) { // 虛擬機 => pc: 程式計數器, sp
   while (1) {
     i = *pc++; ++cycle;
     if (debug) {
-      printf("%d> %04d:%.4s", cycle, (pc-code-1), &"LEA ,IMM ,JMP ,JSR ,BZ  ,BNZ ,ENT ,ADJ ,LEV ,LI  ,LC  ,SI  ,SC  ,PSH ,"\
+      printf("%d> %04d:%.4s", cycle, (pc-code-1), 
+           &"LEA ,IMM ,JMP ,JSR ,BZ  ,BNZ ,ENT ,ADJ ,LEV ,LI  ,LC  ,SI  ,SC  ,PSH ,"\
             "OR  ,XOR ,AND ,EQ  ,NE  ,LT  ,GT  ,LE  ,GE  ,SHL ,SHR ,ADD ,SUB ,MUL ,DIV ,MOD ,"\
             "OPEN,READ,CLOS,PRTF,MALC,FREE,MSET,MCMP,EXIT,"[i * 5]); // 印出該行執行訊息; &OP[i * 5] 為運算符號 OP="LEA ,IMM ,JMP..."
       if (i <= ADJ) printf(" %d\n", *pc); else printf("\n");
