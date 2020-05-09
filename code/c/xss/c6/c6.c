@@ -28,10 +28,11 @@ enum { Tk, Hash, Name, Class, Type, Val, HClass, HType, HVal, Idsz }; // HClass,
 // opcodes (機器碼的 op)
 enum { LEA ,IMM ,JMP ,JSR ,BZ  ,BNZ ,ENT ,ADJ ,LEV ,LI  ,LC  ,SI  ,SC  ,PSH ,
        OR  ,XOR ,AND ,EQ  ,NE  ,LT  ,GT  ,LE  ,GE  ,SHL ,SHR ,ADD ,SUB ,MUL ,DIV ,MOD ,
-       OPEN,READ,CLOS,PRTF,MALC,FREE,MSET,MCMP,EXIT };
+       OPEN,READ,CLOS,PRTF,MALC,FREE,MSET,MCMP,MCPY,EXIT };
 
 char *source, *p, *lp, // current position in source code (p: 目前原始碼指標, lp: 上一行原始碼指標)
-     *data, *datap;   // datap/bss pointer (資料段機器碼指標)
+     *data, *datap,   // datap/bss pointer (資料段機器碼指標)
+     *st, *stp;      // 字串表, 字串表指標
 
 int *code, *e, *le,  // current position in emitted code (e: 目前機器碼指標, le: 上一行機器碼指標)
     *id,      // currently parsed identifier (id: 目前的 id)
@@ -44,6 +45,14 @@ int *code, *e, *le,  // current position in emitted code (e: 目前機器碼指�
     src,      // print source and assembly flag (印出原始碼)
     debug,    // print executed instructions (印出執行指令 -- 除錯模式)
     poolsz;   // 分配空間大小
+
+void st_add(char *str, int len) {
+  memcpy(stp, str, len);
+  stp = stp + len;
+  *stp++ = 0;
+}
+
+void sym_add()
 
 void next() // 詞彙解析 lexer
 {
@@ -58,7 +67,7 @@ void next() // 詞彙解析 lexer
         while (le < e) { // 印出上一行的所有目的碼
           printf("%8.4s", &"LEA ,IMM ,JMP ,JSR ,BZ  ,BNZ ,ENT ,ADJ ,LEV ,LI  ,LC  ,SI  ,SC  ,PSH ,"\
             "OR  ,XOR ,AND ,EQ  ,NE  ,LT  ,GT  ,LE  ,GE  ,SHL ,SHR ,ADD ,SUB ,MUL ,DIV ,MOD ,"\
-            "OPEN,READ,CLOS,PRTF,MALC,FREE,MSET,MCMP,EXIT,"[*++le * 5]);
+            "OPEN,READ,CLOS,PRTF,MALC,FREE,MSET,MCMP,MCPY,EXIT,"[*++le * 5]);
           if (*le <= ADJ) printf(" %d\n", *++le); else printf("\n"); // LEA ,IMM ,JMP ,JSR ,BZ  ,BNZ ,ENT ,ADJ 有一個參數。
         }
       }
@@ -72,6 +81,7 @@ void next() // 詞彙解析 lexer
       while ((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z') || (*p >= '0' && *p <= '9') || *p == '_')
         tk = tk * 147 + *p++;  // 計算雜湊值
       tk = (tk << 6) + (p - pp); // 考慮長度的雜湊值！
+      st_add(pp, p-pp);
       id = sym;
       while (id[Tk]) { // 循序搜尋 ?
         if (tk == id[Hash] && !memcmp((char *)id[Name], pp, p - pp)) { tk = id[Tk]; return; } // 沒碰撞就傳回 token
@@ -442,7 +452,7 @@ int vm_run(int *pc, int *bp, int *sp) { // 虛擬機 => pc: 程式計數器, sp:
       printf("%d> %04d:%.4s", cycle, (pc-code-1), 
            &"LEA ,IMM ,JMP ,JSR ,BZ  ,BNZ ,ENT ,ADJ ,LEV ,LI  ,LC  ,SI  ,SC  ,PSH ,"\
             "OR  ,XOR ,AND ,EQ  ,NE  ,LT  ,GT  ,LE  ,GE  ,SHL ,SHR ,ADD ,SUB ,MUL ,DIV ,MOD ,"\
-            "OPEN,READ,CLOS,PRTF,MALC,FREE,MSET,MCMP,EXIT,"[i * 5]); // 印出該行執行訊息; &OP[i * 5] 為運算符號 OP="LEA ,IMM ,JMP..."
+            "OPEN,READ,CLOS,PRTF,MALC,FREE,MSET,MCMP,MCPY,EXIT,"[i * 5]); // 印出該行執行訊息; &OP[i * 5] 為運算符號 OP="LEA ,IMM ,JMP..."
       if (i <= ADJ) printf(" %d\n", *pc); else printf("\n");
     }
     if      (i == LEA) a = (int)(bp + *pc++);                             // load local address 載入區域變數
@@ -485,6 +495,7 @@ int vm_run(int *pc, int *bp, int *sp) { // 虛擬機 => pc: 程式計數器, sp:
     else if (i == FREE) free((void *)*sp); // 釋放記憶體
     else if (i == MSET) a = (int)memset((char *)sp[2], sp[1], *sp); // 設定記憶體
     else if (i == MCMP) a = memcmp((char *)sp[2], (char *)sp[1], *sp); // 比較記憶體
+    else if (i == MCPY) a = (int)memcpy((char *)sp[2], (char *)sp[1], *sp); // 複製記憶體
     else if (i == EXIT) { printf("exit(%d) cycle = %d\n", *sp, cycle); return *sp; } // EXIT 離開
     else { printf("unknown instruction = %d! cycle = %d\n", i, cycle); return -1; } // 錯誤處理
   }
@@ -519,14 +530,16 @@ int main(int argc, char **argv) // 主程式
 
   if (!(sym = malloc(poolsz))) { printf("could not malloc(%d) symbol area\n", poolsz); return -1; } // 符號段
   if (!(code = le = e = malloc(poolsz))) { printf("could not malloc(%d) text area\n", poolsz); return -1; } // 程式段
-  if (!(data = datap = malloc(poolsz))) { printf("could not malloc(%d) datap area\n", poolsz); return -1; } // 資料段
+  if (!(data = datap = malloc(poolsz))) { printf("could not malloc(%d) data area\n", poolsz); return -1; } // 資料段
+  if (!(st = stp = malloc(poolsz))) { printf("could not malloc(%d) st area\n", poolsz); return -1; } // 字串表
 
   memset(sym,  0, poolsz);
   memset(code, 0, poolsz);
   memset(data, 0, poolsz);
+  memset(st,   0, poolsz);
 
   p = "char else enum if int return sizeof while "
-      "open read close printf malloc free memset memcmp exit void main";
+      "open read close printf malloc free memset memcmp memcpy exit void main";
   i = Char; while (i <= While) { next(); id[Tk] = i++; } // add keywords to symbol table
   i = OPEN; while (i <= EXIT) { next(); id[Class] = Sys; id[Type] = INT; id[Val] = i++; } // add library to symbol table
   next(); id[Tk] = Char; // handle void type
