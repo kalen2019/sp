@@ -1,28 +1,25 @@
-#include "xcc.h"
-// 修改者: 陳鍾誠 (模組化並加上中文註解)
-// 聲明：xcc 是從 c4 修改過來的，以下是 c4 的資訊。
 // c4.c - C in four functions
 // char, int, and pointer types
 // if, while, return, and expression statements
 // just enough features to allow self-compilation and a bit more
 // Written by Robert Swierczek
+// 修改者: 陳鍾誠 (模組化並加上中文註解)
 
-char *p, *lp, // current position in source code (p: 目前原始碼指標, lp: 上一行原始碼指標)
-     *dp, *data; // data: 資料段起點, dp: data/bss pointer (資料段機器碼指標)
+#include "xcc.h"
 
-ID *id, *sym;    // currently parsed identifier (id: 目前的 id)
-Rel *rel, *relp; // 重定位紀錄。
-int *code,    // ccc: add *code (程式段)
-    *e, *le,  // current position in emitted code (e: 目前機器碼指標, le: 上一行機器碼指標)
+char *source, *p, *lp, // current position in source code (p: 目前原始碼指標, lp: 上一行原始碼指標)
+     *data, *datap;   // datap/bss pointer (資料段機器碼指標)
+
+int *code, *e, *le,  // current position in emitted code (e: 目前機器碼指標, le: 上一行機器碼指標)
+    *id,      // currently parsed identifier (id: 目前的 id)
+    *sym,     // symbol table (simple list of identifiers) (符號表)
     tk,       // current token (目前 token)
     ival,     // current token value (目前的 token 值)
     ty,       // current expression type (目前的運算式型態)
     loc,      // local variable offset (區域變數的位移)
     line,     // current line number (目前行號)
-    src=0,      // print source and assembly flag (印出原始碼)
-    debug=0,    // print executed instructions (印出執行指令 -- 除錯模式)
-    run=0,      // run code. (執行程式) (add by ccc)
-    obj=0;      // output obj file. (輸出目的檔) (add by ccc)
+    src,      // print source and assembly flag (印出原始碼)
+    debug;    // print executed instructions (印出執行指令 -- 除錯模式)
 
 void next() // 詞彙解析 lexer
 {
@@ -35,7 +32,7 @@ void next() // 詞彙解析 lexer
         printf("%d: %.*s", line, p - lp, lp); // 印出該行
         lp = p; // lp = p = 新一行的原始碼開頭
         while (le < e) { // 印出上一行的所有目的碼
-          printf("%8.4s", &OP[*++le * 5]); // 印出運算符號 OP="LEA ,IMM ,JMP..."
+          printf("%8.4s", &OPS[*++le * 5]);
           if (*le <= ADJ) printf(" %d\n", *++le); else printf("\n"); // LEA ,IMM ,JMP ,JSR ,BZ  ,BNZ ,ENT ,ADJ 有一個參數。
         }
       }
@@ -44,20 +41,19 @@ void next() // 詞彙解析 lexer
     else if (tk == '#') { // 取得 #include <stdio.h> 這類的一整行
       while (*p != 0 && *p != '\n') ++p;
     }
-    else if ((tk >= 'a' && tk <= 'z') || (tk >= 'A' && tk <= 'Z') || tk == '_') { // 取得變數名稱
+    else if ((tk >= 'a' && tk <= 'z') || (tk >= 'A' && tk < 'Z') || tk == '_') { // 取得變數名稱
       pp = p - 1;
       while ((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z') || (*p >= '0' && *p <= '9') || *p == '_')
         tk = tk * 147 + *p++;  // 計算雜湊值
-      tk = (tk << 6) + (p - pp); // 符號表的雜湊位址 ??
-      id = sym; // bug : 這裡有問題?
-      while (id->tk) { // 檢查該符號是否已經存在 ? (循序搜尋?)
-        if (tk == id->hash && !memcmp(id->name, pp, p - pp)) { tk = id->tk; return; } // 若已經存在就傳回該 id, tk
-        id++; // = id + Idsz; // 碰撞，前進到下一格。
+      tk = (tk << 6) + (p - pp); // 考慮長度的雜湊值！
+      id = sym;
+      while (id[Tk]) { // 循序搜尋 ?
+        if (tk == id[Hash] && !memcmp((char *)id[Name], pp, p - pp)) { tk = id[Tk]; return; } // 沒碰撞就傳回 token
+        id = id + Idsz; // 碰撞，前進到下一格。
       }
-      id->name = pp; // id->name = ptr(變數名稱)
-      // printf("%.*s\n", p-pp, id->name);
-      id->hash = tk; // id->hash = 雜湊值
-      tk = id->tk = Id; // token = id->tk = Id
+      id[Name] = (int)pp; // id.Name = ptr(變數名稱)
+      id[Hash] = tk; // id.Hash = 雜湊值
+      tk = id[Tk] = Id; // token = id.Tk = Id
       return;
     }
     else if (tk >= '0' && tk <= '9') { // 取得數字串
@@ -67,7 +63,7 @@ void next() // 詞彙解析 lexer
           ival = ival * 16 + (tk & 15) + (tk >= 'A' ? 9 : 0);
       }
       else { while (*p >= '0' && *p <= '7') ival = ival * 8 + *p++ - '0'; } // 八進位
-      tk = Num; // token = Number
+      tk = Num;
       return;
     }
     else if (tk == '/') {
@@ -81,18 +77,15 @@ void next() // 詞彙解析 lexer
       }
     }
     else if (tk == '\'' || tk == '"') { // 字元或字串
-      pp = dp;
+      pp = datap;
       while (*p != 0 && *p != tk) {
         if ((ival = *p++) == '\\') {
           if ((ival = *p++) == 'n') ival = '\n'; // 處理 \n 的特殊情況
         }
-        if (tk == '"') *dp++ = ival; // 把字串塞到資料段裏
+        if (tk == '"') *datap++ = ival; // 把字串塞到資料段裏
       }
       ++p;
-      if (tk == '"') {    // 若是字串
-        ival = (int)pp;   // ival = 字串 (在資料段中的) 指標
-        *dp++='\0';       // 結尾字元
-      } else tk = Num;    // tk = 字元值
+      if (tk == '"') ival = (int)pp; else tk = Num; // (若是字串) ? (ival = 字串 (在資料段中的) 指標) : (字元值)
       return;
     } // 以下為運算元 =+-!<>|&^%*[?~, ++, --, !=, <=, >=, ||, &&, ~  ;{}()],:
     else if (tk == '=') { if (*p == '=') { ++p; tk = Eq; } else tk = Assign; return; }
@@ -119,11 +112,9 @@ void expr(int lev) // 運算式 expression, 其中 lev 代表優先等級
   if (!tk) { printf("%d: unexpected eof in expression\n", line); exit(-1); } // EOF
   else if (tk == Num) { *++e = IMM; *++e = ival; next(); ty = INT; } // 數值
   else if (tk == '"') { // 字串
-    *++e = IMM; *++e = ival; 
-    relp->offset = (int) (e-code); relp->name = (char*) ival; relp->rtype = RData; relp++; // add by ccc (記得 e 是落後 1 的)
-    next();
+    *++e = IMM; *++e = ival; next();
     while (tk == '"') next();
-    dp = (char *)(((int)dp + sizeof(int)) & -sizeof(int)); ty = PTR; // 用 int 為大小對齊 ??
+    datap = (char *)(((int)datap + sizeof(int)) & -sizeof(int)); ty = PTR; // 用 int 為大小對齊 ??
   }
   else if (tk == Sizeof) { // 處理 sizeof(type) ，其中 type 可能為 char, int 或 ptr
     next(); if (tk == '(') next(); else { printf("%d: open paren expected in sizeof\n", line); exit(-1); }
@@ -134,28 +125,25 @@ void expr(int lev) // 運算式 expression, 其中 lev 代表優先等級
     ty = INT;
   }
   else if (tk == Id) { // 處理 id ...
-    ID *d = id; next();
+    d = id; next();
     if (tk == '(') { // id (args) ，這是 call
       next();
       t = 0;
       while (tk != ')') { expr(Assign); *++e = PSH; ++t; if (tk == ',') next(); } // 推入 arg
       next();
-      // d.class 可能為 Num = 128, Fun, Sys, Glo, Loc, ...
-      if (d->class == Sys) *++e = d->val; // token 是系統呼叫 ???
-      else if (d->class == Fun) { // token 是自訂函數，用 JSR : jump to subroutine 指令呼叫
-        *++e = JSR; *++e = d->val;
-        relp->offset = (int) (e-code); relp->rtype = RCode; relp->name = d->name; // add by ccc
-      }
-      else { printf("%d: bad function call\n", line); exit(-1); } // Fun 是 129
+      // d[Class] 可能為 Num = 128, Fun, Sys, Glo, Loc, ...
+      if (d[Class] == Sys) *++e = d[Val]; // token 是系統呼叫 ???
+      else if (d[Class] == Fun) { *++e = JSR; *++e = d[Val]; } // token 是自訂函數，用 JSR : jump to subroutine 指令呼叫
+      else { printf("%d: bad function call\n", line); exit(-1); }
       if (t) { *++e = ADJ; *++e = t; } // 有參數，要調整堆疊  (ADJ : stack adjust)
-      ty = d->type;
+      ty = d[Type];
     }
-    else if (d->class == Num) { *++e = IMM; *++e = d->val; ty = INT; } // 該 d 是數值
+    else if (d[Class] == Num) { *++e = IMM; *++e = d[Val]; ty = INT; } // 該 id 是數值
     else {
-      if (d->class == Loc) { *++e = LEA; *++e = loc - d->val; } // 該 d 是區域變數，載入區域變數 (LEA : load local address)
-      else if (d->class == Glo) { *++e = IMM; *++e = d->val; }  // 該 d 是全域變數，載入該全域變數 (IMM : load global address or immediate 載入全域變數或立即值)
+      if (d[Class] == Loc) { *++e = LEA; *++e = loc - d[Val]; } // 該 id 是區域變數，載入區域變數 (LEA : load local address)
+      else if (d[Class] == Glo) { *++e = IMM; *++e = d[Val]; }  // 該 id 是全域變數，載入該全域變數 (IMM : load global address or immediate 載入全域變數或立即值)
       else { printf("%d: undefined variable\n", line); exit(-1); }
-      *++e = ((ty = d->type) == CHAR) ? LC : LI; // LI  : load int, LC  : load char
+      *++e = ((ty = d[Type]) == CHAR) ? LC : LI; // LI  : load int, LC  : load char
     }
   }
   else if (tk == '(') { // (E) : 有括號的運算式 ...
@@ -214,12 +202,12 @@ void expr(int lev) // 運算式 expression, 其中 lev 代表優先等級
       *++e = BZ; d = ++e;
       expr(Assign);
       if (tk == ':') next(); else { printf("%d: conditional missing colon\n", line); exit(-1); }
-      *d = (int)(e + 3); *++e = JMP; d = ++e; // JMP *d;   *d = Cond 結束後的那個程式點。 (ccc: 目前用絕對跳躍，是否應該改相對跳曜)
+      *d = (int)(e + 3 - d); *++e = JMP; d = ++e;
       expr(Cond);
-      *d = (int)(e + 1);
+      *d = (int)(e + 1 - d);
     }
-    else if (tk == Lor) { next(); *++e = BNZ; d = ++e; expr(Lan); *d = (int)(e + 1); ty = INT; }
-    else if (tk == Lan) { next(); *++e = BZ;  d = ++e; expr(Or);  *d = (int)(e + 1); ty = INT; }
+    else if (tk == Lor) { next(); *++e = BNZ; d = ++e; expr(Lan); *d = (int)(e + 1 - d); ty = INT; }
+    else if (tk == Lan) { next(); *++e = BZ;  d = ++e; expr(Or);  *d = (int)(e + 1 - d); ty = INT; }
     else if (tk == Or)  { next(); *++e = PSH; expr(Xor); *++e = OR;  ty = INT; }
     else if (tk == Xor) { next(); *++e = PSH; expr(And); *++e = XOR; ty = INT; }
     else if (tk == And) { next(); *++e = PSH; expr(Eq);  *++e = AND; ty = INT; }
@@ -280,11 +268,11 @@ void stmt() // 陳述 statement
     *++e = BZ; b = ++e;
     stmt();
     if (tk == Else) { // else 語句
-      *b = (int)(e + 3); *++e = JMP; b = ++e;
+      *b = (int)(e + 3 - b); *++e = JMP; b = ++e;
       next();
       stmt();
     }
-    *b = (int)(e + 1);
+    *b = (int)(e + 1 - b);
   }
   else if (tk == While) { // while 語句
     next();
@@ -294,8 +282,8 @@ void stmt() // 陳述 statement
     if (tk == ')') next(); else { printf("%d: close paren expected\n", line); exit(-1); }
     *++e = BZ; b = ++e;
     stmt();
-    *++e = JMP; *++e = (int)a;
-    *b = (int)(e + 1);
+    *++e = JMP; ++e; *e = (int) (a-e);
+    *b = (int)(e + 1 - b);
   }
   else if (tk == Return) { // return 語句
     next();
@@ -340,34 +328,34 @@ int prog() { // 編譯整個程式 Program
             i = ival;
             next();
           }
-          id->class = Num; id->type = INT; id->val = i++;
+          id[Class] = Num; id[Type] = INT; id[Val] = i++;
           if (tk == ',') next();
         }
         next();
       }
     }
     while (tk != ';' && tk != '}') { // 掃描直到區塊結束
-      ty = bt; // bt: basetype
+      ty = bt;
       while (tk == Mul) { next(); ty = ty + PTR; }
       if (tk != Id) { printf("%d: bad global declaration\n", line); return -1; }
-      if (id->class) { printf("%d: duplicate global definition\n", line); return -1; } // id->class 已經存在，重複宣告了！
+      if (id[Class]) { printf("%d: duplicate global definition\n", line); return -1; } // id.Class 已經存在，重複宣告了！
       next();
-      id->type = ty;
+      id[Type] = ty;
       if (tk == '(') { // function 函數定義 ex: int f( ...
-        id->class = Fun;
-        id->val = (int)(e + 1);
+        id[Class] = Fun;
+        id[Val] = (int)(e + 1);
         next(); i = 0;
         while (tk != ')') { // 掃描參數直到 ...)
           ty = INT;
           if (tk == Int) next();
           else if (tk == Char) { next(); ty = CHAR; }
-          while (tk == Mul) { next(); ty = ty + PTR; } // ty+PTR => ty*
+          while (tk == Mul) { next(); ty = ty + PTR; }
           if (tk != Id) { printf("%d: bad parameter declaration\n", line); return -1; }
-          if (id->class == Loc) { printf("%d: duplicate parameter definition\n", line); return -1; } // 這裡的 id 會指向 hash 搜尋過的 symTable 裏的那個 (在 next 裏處理的)，所以若是該 id 已經是 Local，那麼就重複了！
-          // 把 id->Class, id->Type, id->Val 暫存到 id->HClass, id->HType, id->Hval ，因為 Local 優先於 Global
-          id->hclass = id->class; id->class = Loc;
-          id->htype  = id->type;  id->type = ty;
-          id->hval   = id->val;   id->val = i++;
+          if (id[Class] == Loc) { printf("%d: duplicate parameter definition\n", line); return -1; } // 這裡的 id 會指向 hash 搜尋過的 symTable 裏的那個 (在 next 裏處理的)，所以若是該 id 已經是 Local，那麼就重複了！
+          // 把 id.Class, id.Type, id.Val 暫存到 id.HClass, id.HType, id.Hval ，因為 Local 優先於 Global
+          id[HClass] = id[Class]; id[Class] = Loc;
+          id[HType]  = id[Type];  id[Type] = ty;
+          id[HVal]   = id[Val];   id[Val] = i++;
           next();
           if (tk == ',') next();
         }
@@ -382,34 +370,33 @@ int prog() { // 編譯整個程式 Program
             ty = bt;
             while (tk == Mul) { next(); ty = ty + PTR; }
             if (tk != Id) { printf("%d: bad local declaration\n", line); return -1; }
-            if (id->class == Loc) { printf("%d: duplicate local definition\n", line); return -1; }
-            // 把 id->Class, id->Type, id->Val 暫存到 id->HClass, id->HType, id->Hval ，因為 Local 優先於 Global
-            id->hclass = id->class; id->class = Loc;
-            id->htype  = id->type;  id->type = ty;
-            id->hval   = id->val;   id->val = ++i;
+            if (id[Class] == Loc) { printf("%d: duplicate local definition\n", line); return -1; }
+            // 把 id.Class, id.Type, id.Val 暫存到 id.HClass, id.HType, id.Hval ，因為 Local 優先於 Global
+            id[HClass] = id[Class]; id[Class] = Loc;
+            id[HType]  = id[Type];  id[Type] = ty;
+            id[HVal]   = id[Val];   id[Val] = ++i;
             next();
             if (tk == ',') next();
           }
           next();
         }
-        *++e = ENT; *++e = i - loc; // 進入函數，用 ENT num 分配區域變數空間。
+        *++e = ENT; *++e = i - loc;
         while (tk != '}') stmt();
-        *++e = LEV; // 離開函數，呼叫 LEV。
+        *++e = LEV;
         id = sym; // unwind symbol table locals (把被區域變數隱藏掉的那些 Local id 還原，恢復全域變數的符號定義)
-        // ccc: 在這裡 symTable 的東西又被還原了，所以區域變數的型態就忘記了。(符號表裡只要記全域變數的型態，不需要記區域變數的型態)
-        while (id->tk) {
-          if (id->class == Loc) {
-            id->class = id->hclass;
-            id->type = id->htype;
-            id->val = id->hval;
+        while (id[Tk]) {
+          if (id[Class] == Loc) {
+            id[Class] = id[HClass];
+            id[Type] = id[HType];
+            id[Val] = id[HVal];
           }
-          id++; //  = id + Idsz;
+          id = id + Idsz;
         }
       }
-      else { // 不是函數，那就是全域變數，data 段留一個 int 給它。
-        id->class = Glo;
-        id->val = (int)dp;
-        dp = dp + sizeof(int);
+      else {
+        id[Class] = Glo;
+        id[Val] = (int)datap;
+        datap = datap + sizeof(int);
       }
       if (tk == ',') next();
     }
@@ -420,49 +407,41 @@ int prog() { // 編譯整個程式 Program
 
 int main(int argc, char **argv) // 主程式
 {
-  int fd, *pc, i;
-  ID *idmain;
+  int fd, *idmain;
+  int *pc;
+  int i;
 
   --argc; ++argv;
   if (argc > 0 && **argv == '-' && (*argv)[1] == 's') { src = 1; --argc; ++argv; }
   if (argc > 0 && **argv == '-' && (*argv)[1] == 'd') { debug = 1; --argc; ++argv; }
-  if (argc > 0 && **argv == '-' && (*argv)[1] == 'r') { run = 1; --argc; ++argv; } // run: add by ccc
-  if (argc > 0 && **argv == '-' && (*argv)[1] == 'o') { obj = 1; --argc; ++argv; } // obj: add by ccc
-  if (argc < 1) { printf("usage: xcc [-s] [-d] [-r] file ...\n"); return -1; }
+  if (argc < 1) { printf("usage: xcc [-s] [-d] file ...\n"); return -1; }
 
   if ((fd = open(*argv, 0)) < 0) { printf("could not open(%s)\n", *argv); return -1; }
 
   if (!(sym = malloc(poolsz))) { printf("could not malloc(%d) symbol area\n", poolsz); return -1; } // 符號段
-  if (!(code = malloc(poolsz))) { printf("could not malloc(%d) text area\n", poolsz); return -1; } // 程式段
-  if (!(data = dp = malloc(poolsz))) { printf("could not malloc(%d) data area\n", poolsz); return -1; } // 資料段
-  if (!(rel = relp = malloc(poolsz))) { printf("could not malloc(%d) rel area\n", poolsz); return -1; } // 資料段
-  le = e = code-1; // 因為都用 *++e=....，所以要先減一，才能塞到第0格。
+  if (!(code = le = e = malloc(poolsz))) { printf("could not malloc(%d) text area\n", poolsz); return -1; } // 程式段
+  if (!(data = datap = malloc(poolsz))) { printf("could not malloc(%d) datap area\n", poolsz); return -1; } // 資料段
+
   memset(sym,  0, poolsz);
   memset(code, 0, poolsz);
   memset(data, 0, poolsz);
-  memset(rel,  0, poolsz);
 
   p = "char else enum if int return sizeof while "
       "open read close printf malloc free memset memcmp exit void main";
-  i = Char; while (i <= While) { next(); id->tk = i++; } // add keywords to symbol table
-  i = OPEN; while (i <= EXIT) { next(); id->class = Sys; id->type = INT; id->val = i++; } // add library to symbol table
-  // 接下來處理 void main 的宣告。
-  next(); id->tk = Char; // handle void type
+  i = Char; while (i <= While) { next(); id[Tk] = i++; } // add keywords to symbol table
+  i = OPEN; while (i <= EXIT) { next(); id[Class] = Sys; id[Type] = INT; id[Val] = i++; } // add library to symbol table
+  next(); id[Tk] = Char; // handle void type
   next(); idmain = id; // keep track of main
 
-  if (!(lp = p = malloc(poolsz))) { printf("could not malloc(%d) source area\n", poolsz); return -1; } // 原始程式碼 filename.c 的空間
+  if (!(source = lp = p = malloc(poolsz))) { printf("could not malloc(%d) source area\n", poolsz); return -1; }
   if ((i = read(fd, p, poolsz-1)) <= 0) { printf("read() returned %d\n", i); return -1; }
   p[i] = 0; // 設定程式 p 字串結束符號 \0
   close(fd);
 
   if (prog() == -1) return -1;
 
-  if (!(pc = (int *)idmain->val)) { printf("main() not defined\n"); return -1; }
+  if (!(pc = (int *)idmain[Val])) { printf("main() not defined\n"); return -1; }
   if (src) return 0;
 
-  if (obj) {
-    Obj obj = {.code=code, .data=data, .sym=sym, .rel=rel, .codeLen=e-code };
-    xobj_dump(&obj);
-  }
-  if (run || debug) xvm_main(pc, argc, argv);
+  xvm_main(pc, argc, argv);
 }
