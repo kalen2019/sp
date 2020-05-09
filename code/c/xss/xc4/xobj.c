@@ -1,11 +1,16 @@
 #include "xcc.h"
 
 char *types[] = {"char", "int", "ptr", "char*", "int*", "ptr*" };
+char *classes[] = {"Num"/*=128*/, "Fun", "Sys", "Glo", "Loc", "Id", 
+  "Char", "Else", "Enum", "If", "Int", "Return", "Sizeof", "While",
+  "Assign", "Cond", "Lor", "Lan", "Or", "Xor", "And", "Eq", "Ne", "Lt", "Gt", "Le", "Ge", 
+  "Shl", "Shr", "Add", "Sub", "Mul", "Div", "Mod", "Inc", "Dec", "Brak"};
+char *sections[] = {"Code", "Data"};
+char *rtypes[] = { "RNone", "RData", "RCode" };
 
-void xobj_dump(Obj *obj) { // 虛擬機 => pc: 程式計數器, sp: 堆疊暫存器, bp: 框架暫存器
-  // printf("codeLen = %d obj->data=%p\n", obj->codeLen, obj->data);
-  // int *pc = obj->code;
-  int *pc = obj->code; // 第 0 個沒放指令，因為都用 *++e=....。
+void xobj_dump(Obj *obj) {
+  printf("code=%p=%d codeLen=%d data=%p=%d\n", obj->code, obj->code, obj->codeLen, obj->data, obj->data);
+  int *pc = obj->code;
   while (1) {
     int ci = pc - obj->code;
     int i = *pc++;
@@ -25,8 +30,13 @@ void xobj_dump(Obj *obj) { // 虛擬機 => pc: 程式計數器, sp: 堆疊暫存
   ID *id = sym;
   while (id->tk) { // 檢查該符號是否已經存在 ? (循序搜尋?)
     if (id->class != Loc && id->class != 0) // 單純區域變數 (沒有同名的全域)，不須存放在符號表內了！ (注意，其 type, class 已經被還原了，所以 type 不正確。)
-      printf("name=%.10s type=%s htype=%s val=%d\n", id->name, types[id->type], types[id->htype], id->val);
+      printf("name=%.10s type=%s class=%s val=%d\n", id->name, types[id->type], classes[id->class-Num], id->val);
     id++;
+  }
+  Rel *relp = obj->rel;
+  while (relp->rtype) {
+    printf("offset=%d rtype=%s name=%.10s\n", relp->offset, rtypes[relp->rtype], relp->name);
+    relp++;
   }
 }
 

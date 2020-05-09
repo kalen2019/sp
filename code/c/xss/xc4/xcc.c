@@ -10,11 +10,10 @@
 char *p, *lp, // current position in source code (p: 目前原始碼指標, lp: 上一行原始碼指標)
      *dp, *data; // data: 資料段起點, dp: data/bss pointer (資料段機器碼指標)
 
-ID *id, *sym;        // currently parsed identifier (id: 目前的 id)
+ID *id, *sym;    // currently parsed identifier (id: 目前的 id)
+Rel *rel, *relp; // 重定位紀錄。
 int *code,    // ccc: add *code (程式段)
     *e, *le,  // current position in emitted code (e: 目前機器碼指標, le: 上一行機器碼指標)
-    // *id,      // currently parsed identifier (id: 目前的 id)
-    // *sym,     // symbol table (simple list of identifiers) (符號表)
     tk,       // current token (目前 token)
     ival,     // current token value (目前的 token 值)
     ty,       // current expression type (目前的運算式型態)
@@ -90,7 +89,10 @@ void next() // 詞彙解析 lexer
         if (tk == '"') *dp++ = ival; // 把字串塞到資料段裏
       }
       ++p;
-      if (tk == '"') { ival = (int)pp; *dp++='\0'; /*結尾字元*/ } else tk = Num; // (若是字串) ? (ival = 字串 (在資料段中的) 指標) : (字元值)
+      if (tk == '"') {    // 若是字串
+        ival = (int)pp;   // ival = 字串 (在資料段中的) 指標
+        *dp++='\0';       // 結尾字元
+      } else tk = Num;    // tk = 字元值
       return;
     } // 以下為運算元 =+-!<>|&^%*[?~, ++, --, !=, <=, >=, ||, &&, ~  ;{}()],:
     else if (tk == '=') { if (*p == '=') { ++p; tk = Eq; } else tk = Assign; return; }
@@ -117,7 +119,9 @@ void expr(int lev) // 運算式 expression, 其中 lev 代表優先等級
   if (!tk) { printf("%d: unexpected eof in expression\n", line); exit(-1); } // EOF
   else if (tk == Num) { *++e = IMM; *++e = ival; next(); ty = INT; } // 數值
   else if (tk == '"') { // 字串
-    *++e = IMM; *++e = ival; next();
+    *++e = IMM; *++e = ival; 
+    relp->offset = (int) (e-code); relp->name = (char*) ival; relp->rtype = RData; relp++; // add by ccc (記得 e 是落後 1 的)
+    next();
     while (tk == '"') next();
     dp = (char *)(((int)dp + sizeof(int)) & -sizeof(int)); ty = PTR; // 用 int 為大小對齊 ??
   }
@@ -138,7 +142,10 @@ void expr(int lev) // 運算式 expression, 其中 lev 代表優先等級
       next();
       // d.class 可能為 Num = 128, Fun, Sys, Glo, Loc, ...
       if (d->class == Sys) *++e = d->val; // token 是系統呼叫 ???
-      else if (d->class == Fun) { *++e = JSR; *++e = d->val; } // token 是自訂函數，用 JSR : jump to subroutine 指令呼叫
+      else if (d->class == Fun) { // token 是自訂函數，用 JSR : jump to subroutine 指令呼叫
+        *++e = JSR; *++e = d->val;
+        relp->offset = (int) (e-code); relp->rtype = RCode; relp->name = d->name; // add by ccc
+      }
       else { printf("%d: bad function call\n", line); exit(-1); } // Fun 是 129
       if (t) { *++e = ADJ; *++e = t; } // 有參數，要調整堆疊  (ADJ : stack adjust)
       ty = d->type;
@@ -207,7 +214,7 @@ void expr(int lev) // 運算式 expression, 其中 lev 代表優先等級
       *++e = BZ; d = ++e;
       expr(Assign);
       if (tk == ':') next(); else { printf("%d: conditional missing colon\n", line); exit(-1); }
-      *d = (int)(e + 3); *++e = JMP; d = ++e;
+      *d = (int)(e + 3); *++e = JMP; d = ++e; // JMP *d;   *d = Cond 結束後的那個程式點。 (ccc: 目前用絕對跳躍，是否應該改相對跳曜)
       expr(Cond);
       *d = (int)(e + 1);
     }
@@ -361,7 +368,6 @@ int prog() { // 編譯整個程式 Program
           id->hclass = id->class; id->class = Loc;
           id->htype  = id->type;  id->type = ty;
           id->hval   = id->val;   id->val = i++;
-          printf("name=%.10s type=%s val=%d\n", id->name, types[id->type], id->val); // ccc:debug
           next();
           if (tk == ',') next();
         }
@@ -381,7 +387,6 @@ int prog() { // 編譯整個程式 Program
             id->hclass = id->class; id->class = Loc;
             id->htype  = id->type;  id->type = ty;
             id->hval   = id->val;   id->val = ++i;
-            printf("name=%.10s type=%s val=%d\n", id->name, types[id->type], id->val); // ccc:debug
             next();
             if (tk == ',') next();
           }
@@ -391,8 +396,7 @@ int prog() { // 編譯整個程式 Program
         while (tk != '}') stmt();
         *++e = LEV; // 離開函數，呼叫 LEV。
         id = sym; // unwind symbol table locals (把被區域變數隱藏掉的那些 Local id 還原，恢復全域變數的符號定義)
-        // ccc: 在這裡 symTable 的東西又被還原了，所以區域變數的型態就忘記了。
-        // ccc: 問題是符號表裡只要記全域變數的型態，不需要記區域變數的型態。
+        // ccc: 在這裡 symTable 的東西又被還原了，所以區域變數的型態就忘記了。(符號表裡只要記全域變數的型態，不需要記區域變數的型態)
         while (id->tk) {
           if (id->class == Loc) {
             id->class = id->hclass;
@@ -431,10 +435,12 @@ int main(int argc, char **argv) // 主程式
   if (!(sym = malloc(poolsz))) { printf("could not malloc(%d) symbol area\n", poolsz); return -1; } // 符號段
   if (!(code = malloc(poolsz))) { printf("could not malloc(%d) text area\n", poolsz); return -1; } // 程式段
   if (!(data = dp = malloc(poolsz))) { printf("could not malloc(%d) data area\n", poolsz); return -1; } // 資料段
+  if (!(rel = relp = malloc(poolsz))) { printf("could not malloc(%d) rel area\n", poolsz); return -1; } // 資料段
   le = e = code-1; // 因為都用 *++e=....，所以要先減一，才能塞到第0格。
   memset(sym,  0, poolsz);
   memset(code, 0, poolsz);
   memset(data, 0, poolsz);
+  memset(rel,  0, poolsz);
 
   p = "char else enum if int return sizeof while "
       "open read close printf malloc free memset memcmp exit void main";
@@ -455,7 +461,7 @@ int main(int argc, char **argv) // 主程式
   if (src) return 0;
 
   if (obj) {
-    Obj obj = {.code=code, .data=data, .sym=sym, .codeLen=e-code };
+    Obj obj = {.code=code, .data=data, .sym=sym, .rel=rel, .codeLen=e-code };
     xobj_dump(&obj);
   }
   if (run || debug) xvm_main(pc, argc, argv);
