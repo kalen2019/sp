@@ -37,7 +37,7 @@ char *source, *p, *lp, // current position in source code (p: 目前原始碼指
 
 int *code, *e, *le,  // current position in emitted code (e: 目前機器碼指標, le: 上一行機器碼指標)
     *id,      // currently parsed identifier (id: 目前的 id)
-    *sym,     // symbol table (simple list of identifiers) (符號表)
+    *sym, *symObj, // symbol table (simple list of identifiers) (符號表)
     tk,       // current token (目前 token)
     ival,     // current token value (目前的 token 值)
     ty,       // current expression type (目前的運算式型態)
@@ -77,6 +77,23 @@ int *sym_add(char *name, int len) {
   id[Hash] = h; // id.Hash = 雜湊值
   id[Tk] = Id;  // id.Tk = Id
   return id;
+}
+
+enum { OName, OClass, OSize };
+
+int sym_to_obj() {
+  int *id, *objp;
+  id = sym; objp = symObj;
+  while (id[Tk]) {
+    if (id[Class]==Glo || id[Class]==Fun) {
+      printf("sym:name=%s\n", (char*) id[Name]);
+      objp[Name] = id[Name] - (int) st;
+      objp[Class] = id[Class];
+      objp = objp + OSize;
+    }
+    id = id + Idsz; // 碰撞，前進到下一格。
+  }
+  return (objp-symObj)*sizeof(int);
 }
 
 void next() // 詞彙解析 lexer
@@ -499,7 +516,7 @@ int vm_run(int *pc, int *bp, int *sp) { // 虛擬機 => pc: 程式計數器, sp:
     else if (i == DIV) a = *sp++ /  a;
     else if (i == MOD) a = *sp++ %  a;
 
-    else if (i == OPEN) a = open((char *)sp[1], *sp, 0644); // 開檔
+    else if (i == OPEN) a = open((char *)sp[2], sp[1], *sp); // 開檔
     else if (i == READ) a = read(sp[2], (char *)sp[1], *sp); // 讀檔
     else if (i == WRIT) a = write(sp[2], (char *)sp[1], *sp); // 寫檔
     else if (i == CLOS) a = close(*sp); // 關檔
@@ -535,34 +552,40 @@ char *cFile, *oFile;
 int *obj, *head, headSize, fields;
 
 enum { Code, Data, St, Sym, HeadSize };
-enum { Ctx,  Len, Offset};
+enum { Ctx,  Len, Offset, HeadFields};
 enum { O_READ=0, O_WRITE = 769 }; // 769 = O_WRONLY|O_CREAT|O_TRUNC
 
 int obj_save() {
-  int fd, offset, codeLen, dataLen, stLen, symLen;
-  fields = 3; headSize = HeadSize*fields*sizeof(int); head = malloc(headSize); offset = headSize;
-  codeLen = (int)(e-code); dataLen = (int)(datap-data); stLen = (int)(stp-st); symLen = 0; // symLen = (int)(id-sym);
+  int fd, offset, codeLen, dataLen, stLen, symLen, headLen; // , symLen;
+
+  if (!(symObj = malloc(poolsz))) { printf("could not malloc(%d) symbol area\n", poolsz); return -1; } // symObj
+  symLen = sym_to_obj();
+
+  headLen = HeadSize*HeadFields*sizeof(int); head = malloc(headLen); offset = headLen;
+  codeLen = (int)(e-code); dataLen = (int)(datap-data); stLen = (int)(stp-st);
   head[Code] = (int)code; head[Code+Len] = codeLen; head[Code+Offset] = offset; offset = offset + codeLen;
   head[Data] = (int)data; head[Data+Len] = dataLen; head[Data+Offset] = offset; offset = offset + dataLen;
   head[St]   = (int)st;   head[St+Len]   = stLen;   head[St+Offset] = offset;   offset = offset + stLen;
   head[Sym]  = (int)sym;  head[Sym+Len]  = symLen;  head[Sym+Offset] = offset;  offset = offset + symLen;
-  printf("oFile=%s\n", oFile);
-  // printf("CREAT=%d\n", O_CREAT | O_TRUNC | O_BINARY);
-  printf("codeLen=%d dataLen=%d stLen=%d\n", codeLen, dataLen, stLen);
-  if ((fd = open(oFile, O_WRITE)) < 0) { printf("could not open(%s)\n", oFile); return -1; }
+  // printf("oFile=%s\n", oFile);
+  // printf("codeLen=%d dataLen=%d stLen=%d symLen=%d\n", codeLen, dataLen, stLen, symLen);
+  if ((fd = open(oFile, O_WRITE, 0644)) < 0) { printf("could not open(%s)\n", oFile); return -1; }
   write(fd, head, headSize);
   write(fd, code, codeLen);
   write(fd, data, dataLen);
   write(fd, st, stLen);
-  write(fd, sym, symLen);
+  write(fd, symObj, symLen);
   close(fd);
+  return 0;
+}
+
+int obj_load() {
   return 0;
 }
 
 int cc_main(char *file) {
   int fd, *idmain, i;
-
-  if ((fd = open(file, O_READ)) < 0) { printf("could not open(%s)\n", file); return -1; }
+  if ((fd = open(file, O_READ, 0)) < 0) { printf("could not open(%s)\n", file); return -1; }
 
   ops = "LEA ,IMM ,JMP ,JSR ,BZ  ,BNZ ,ENT ,ADJ ,LEV ,LI  ,LC  ,SI  ,SC  ,PSH ,"\
         "OR  ,XOR ,AND ,EQ  ,NE  ,LT  ,GT  ,LE  ,GE  ,SHL ,SHR ,ADD ,SUB ,MUL ,DIV ,MOD ,"\

@@ -491,7 +491,7 @@ int vm_run(int *pc, int *bp, int *sp) { // 虛擬機 => pc: 程式計數器, sp:
 }
 
 int vm_main(int *pc, int argc, char **argv) {
-  int *bp, *sp, *t;
+  int *sp, *t;
   // setup stack
   if (!(sp = malloc(poolsz))) { printf("could not malloc(%d) stack area\n", poolsz); return -1; }  // 堆疊段
   bp = sp = (int *)((int)sp + poolsz);

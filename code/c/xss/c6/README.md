@@ -68,3 +68,15 @@ hello, world
 9> 327679:EXIT
 exit(0) cycle = 9
 ```
+
+施工中
+
+```
+PS D:\ccc\course\sp\code\c\xss\c6> gcc -m32 -Wall c6.c -o c6    
+PS D:\ccc\course\sp\code\c\xss\c6> ./c6 -o test/var.o test/var.c
+oFile=test/var.o
+codeLen=12 dataLen=28 stLen=160
+sym:name=a
+sym:name=b
+sym:name=c
+```
