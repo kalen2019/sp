@@ -499,7 +499,7 @@ int vm_run(int *pc, int *bp, int *sp) { // 虛擬機 => pc: 程式計數器, sp:
     else if (i == DIV) a = *sp++ /  a;
     else if (i == MOD) a = *sp++ %  a;
 
-    else if (i == OPEN) a = open((char *)sp[2], sp[1], *sp); // 開檔
+    else if (i == OPEN) a = open((char *)sp[1], *sp, 0644); // 開檔
     else if (i == READ) a = read(sp[2], (char *)sp[1], *sp); // 讀檔
     else if (i == WRIT) a = write(sp[2], (char *)sp[1], *sp); // 寫檔
     else if (i == CLOS) a = close(*sp); // 關檔
@@ -549,7 +549,7 @@ int obj_save() {
   printf("oFile=%s\n", oFile);
   // printf("CREAT=%d\n", O_CREAT | O_TRUNC | O_BINARY);
   printf("codeLen=%d dataLen=%d stLen=%d\n", codeLen, dataLen, stLen);
-  if ((fd = open(oFile, O_WRITE, 0644)) < 0) { printf("could not open(%s)\n", oFile); return -1; }
+  if ((fd = open(oFile, O_WRITE)) < 0) { printf("could not open(%s)\n", oFile); return -1; }
   write(fd, head, headSize);
   write(fd, code, codeLen);
   write(fd, data, dataLen);
@@ -562,7 +562,7 @@ int obj_save() {
 int cc_main(char *file) {
   int fd, *idmain, i;
 
-  if ((fd = open(file, O_READ, 0)) < 0) { printf("could not open(%s)\n", file); return -1; }
+  if ((fd = open(file, O_READ)) < 0) { printf("could not open(%s)\n", file); return -1; }
 
   ops = "LEA ,IMM ,JMP ,JSR ,BZ  ,BNZ ,ENT ,ADJ ,LEV ,LI  ,LC  ,SI  ,SC  ,PSH ,"\
         "OR  ,XOR ,AND ,EQ  ,NE  ,LT  ,GT  ,LE  ,GE  ,SHL ,SHR ,ADD ,SUB ,MUL ,DIV ,MOD ,"\
