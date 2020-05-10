@@ -55,25 +55,25 @@ char* st_add(char *str, int len) {
 }
 
 int hash(char *str, int len) {
-  int i, tk; char *p;
-  i=0; tk = 0; p = str;
+  int i, h; char *p;
+  i=0; h = 0; p = str;
   while (i++ < len)
-    tk = tk * 147 + *p++;  // 計算雜湊值
-  tk = (tk << 6) + (p - str); // 考慮長度的雜湊值！
-  return tk;
+    h = h * 147 + *p++;  // 計算雜湊值
+  h = (h << 6) + (p - str); // 考慮長度的雜湊值！
+  return h;
 }
 
 int *sym_add(char *name, int len) {
-  int tk, *id;
-  tk = hash(name, len);
+  int h, *id;
+  h = hash(name, len);
   id = sym;
   while (id[Tk]) { // 循序搜尋 ?
-    if (tk == id[Hash] && !memcmp((char *)id[Name], name, len)) { tk = id[Tk]; return id; } // 該變數出現過，直接傳回舊的！
+    if (h == id[Hash] && !memcmp((char *)id[Name], name, len)) { h = id[Tk]; return id; } // 該變數出現過，直接傳回舊的！
     id = id + Idsz; // 碰撞，前進到下一格。
   }
   id[Name] = (int) name; // 變數名稱
-  id[Hash] = tk; // id.Hash = 雜湊值
-  tk = id[Tk] = Id; // token = id.Tk = Id
+  id[Hash] = h; // id.Hash = 雜湊值
+  id[Tk] = Id;  // id.Tk = Id
   return id;
 }
 
