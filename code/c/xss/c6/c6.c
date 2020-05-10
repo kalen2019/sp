@@ -31,9 +31,9 @@ enum { LEA ,IMM ,JMP ,JSR ,BZ  ,BNZ ,ENT ,ADJ ,LEV ,LI  ,LC  ,SI  ,SC  ,PSH ,
        OPEN,READ,CLOS,PRTF,MALC,FREE,MSET,MCMP,MCPY,EXIT };
 
 char *source, *p, *lp, // current position in source code (p: 目前原始碼指標, lp: 上一行原始碼指標)
-     *data, *datap,   // datap/bss pointer (資料段機器碼指標)
-     *st, *stp;      // 字串表, 字串表指標
-
+     *data, *datap,    // datap/bss pointer (資料段機器碼指標)
+     *st, *stp,        // 字串表, 字串表指標
+     *ops;             // 運算列表。
 int *code, *e, *le,  // current position in emitted code (e: 目前機器碼指標, le: 上一行機器碼指標)
     *id,      // currently parsed identifier (id: 目前的 id)
     *sym,     // symbol table (simple list of identifiers) (符號表)
@@ -46,17 +46,40 @@ int *code, *e, *le,  // current position in emitted code (e: 目前機器碼指�
     debug,    // print executed instructions (印出執行指令 -- 除錯模式)
     poolsz;   // 分配空間大小
 
-void st_add(char *str, int len) {
+char* st_add(char *str, int len) {
+  char *s; s = stp;
   memcpy(stp, str, len);
   stp = stp + len;
   *stp++ = 0;
+  return s;
 }
 
-void sym_add()
+int hash(char *str, int len) {
+  int i, tk; char *p;
+  i=0; tk = 0; p = str;
+  while (i++ < len)
+    tk = tk * 147 + *p++;  // 計算雜湊值
+  tk = (tk << 6) + (p - str); // 考慮長度的雜湊值！
+  return tk;
+}
+
+int *sym_add(char *name, int len) {
+  int tk, *id;
+  tk = hash(name, len);
+  id = sym;
+  while (id[Tk]) { // 循序搜尋 ?
+    if (tk == id[Hash] && !memcmp((char *)id[Name], name, len)) { tk = id[Tk]; return id; } // 該變數出現過，直接傳回舊的！
+    id = id + Idsz; // 碰撞，前進到下一格。
+  }
+  id[Name] = (int) name; // 變數名稱
+  id[Hash] = tk; // id.Hash = 雜湊值
+  tk = id[Tk] = Id; // token = id.Tk = Id
+  return id;
+}
 
 void next() // 詞彙解析 lexer
 {
-  char *pp;
+  char *pp, *name;
 
   while ((tk = *p)) {
     ++p;
@@ -65,9 +88,7 @@ void next() // 詞彙解析 lexer
         printf("%d: %.*s", line, p - lp, lp); // 印出該行
         lp = p; // lp = p = 新一行的原始碼開頭
         while (le < e) { // 印出上一行的所有目的碼
-          printf("%8.4s", &"LEA ,IMM ,JMP ,JSR ,BZ  ,BNZ ,ENT ,ADJ ,LEV ,LI  ,LC  ,SI  ,SC  ,PSH ,"\
-            "OR  ,XOR ,AND ,EQ  ,NE  ,LT  ,GT  ,LE  ,GE  ,SHL ,SHR ,ADD ,SUB ,MUL ,DIV ,MOD ,"\
-            "OPEN,READ,CLOS,PRTF,MALC,FREE,MSET,MCMP,MCPY,EXIT,"[*++le * 5]);
+          printf("%8.4s", &ops[*++le * 5]);
           if (*le <= ADJ) printf(" %d\n", *++le); else printf("\n"); // LEA ,IMM ,JMP ,JSR ,BZ  ,BNZ ,ENT ,ADJ 有一個參數。
         }
       }
@@ -77,19 +98,11 @@ void next() // 詞彙解析 lexer
       while (*p != 0 && *p != '\n') ++p;
     }
     else if ((tk >= 'a' && tk <= 'z') || (tk >= 'A' && tk < 'Z') || tk == '_') { // 取得變數名稱
-      pp = p - 1;
-      while ((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z') || (*p >= '0' && *p <= '9') || *p == '_')
-        tk = tk * 147 + *p++;  // 計算雜湊值
-      tk = (tk << 6) + (p - pp); // 考慮長度的雜湊值！
-      st_add(pp, p-pp);
-      id = sym;
-      while (id[Tk]) { // 循序搜尋 ?
-        if (tk == id[Hash] && !memcmp((char *)id[Name], pp, p - pp)) { tk = id[Tk]; return; } // 沒碰撞就傳回 token
-        id = id + Idsz; // 碰撞，前進到下一格。
-      }
-      id[Name] = (int)pp; // id.Name = ptr(變數名稱)
-      id[Hash] = tk; // id.Hash = 雜湊值
-      tk = id[Tk] = Id; // token = id.Tk = Id
+      pp = p-1;
+      while ((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z') || (*p >= '0' && *p <= '9') || *p == '_') p++;
+      name = st_add(pp, p-pp);
+      id = sym_add(name, p-pp);
+      tk = id[Tk];
       return;
     }
     else if (tk >= '0' && tk <= '9') { // 取得數字串
@@ -449,10 +462,7 @@ int vm_run(int *pc, int *bp, int *sp) { // 虛擬機 => pc: 程式計數器, sp:
   while (1) {
     i = *pc++; ++cycle;
     if (debug) {
-      printf("%d> %04d:%.4s", cycle, (pc-code-1), 
-           &"LEA ,IMM ,JMP ,JSR ,BZ  ,BNZ ,ENT ,ADJ ,LEV ,LI  ,LC  ,SI  ,SC  ,PSH ,"\
-            "OR  ,XOR ,AND ,EQ  ,NE  ,LT  ,GT  ,LE  ,GE  ,SHL ,SHR ,ADD ,SUB ,MUL ,DIV ,MOD ,"\
-            "OPEN,READ,CLOS,PRTF,MALC,FREE,MSET,MCMP,MCPY,EXIT,"[i * 5]); // 印出該行執行訊息; &OP[i * 5] 為運算符號 OP="LEA ,IMM ,JMP..."
+      printf("%d> %04d:%.4s", cycle, (pc-code-1), &ops[i * 5]); // 印出該行執行訊息; &OP[i * 5] 為運算符號 OP="LEA ,IMM ,JMP..."
       if (i <= ADJ) printf(" %d\n", *pc); else printf("\n");
     }
     if      (i == LEA) a = (int)(bp + *pc++);                             // load local address 載入區域變數
@@ -528,6 +538,9 @@ int main(int argc, char **argv) // 主程式
 
   if ((fd = open(*argv, 0)) < 0) { printf("could not open(%s)\n", *argv); return -1; }
 
+  ops = "LEA ,IMM ,JMP ,JSR ,BZ  ,BNZ ,ENT ,ADJ ,LEV ,LI  ,LC  ,SI  ,SC  ,PSH ,"\
+        "OR  ,XOR ,AND ,EQ  ,NE  ,LT  ,GT  ,LE  ,GE  ,SHL ,SHR ,ADD ,SUB ,MUL ,DIV ,MOD ,"\
+        "OPEN,READ,CLOS,PRTF,MALC,FREE,MSET,MCMP,MCPY,EXIT,";
   if (!(sym = malloc(poolsz))) { printf("could not malloc(%d) symbol area\n", poolsz); return -1; } // 符號段
   if (!(code = le = e = malloc(poolsz))) { printf("could not malloc(%d) text area\n", poolsz); return -1; } // 程式段
   if (!(data = datap = malloc(poolsz))) { printf("could not malloc(%d) data area\n", poolsz); return -1; } // 資料段
