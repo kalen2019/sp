@@ -14,10 +14,8 @@
 // ----------- ccc add ----------------
 int *pc, *stack;
 char *cFile, *oFile;
-int *obj; // , *head, headSize, fields;
+char *obj; // , *head, headSize, fields;
 
-enum { Code, Data, St, Sym, HeadSize };
-enum { Ctx,  Len, Offset, HeadFields};
 enum { O_READ=0, O_WRITE = 769 }; // 769 = O_WRONLY|O_CREAT|O_TRUNC
 // ----------- ccc ----------------
 
@@ -47,7 +45,7 @@ char *source, *p, *lp, // current position in source code (p: 目前原始碼指
 
 int *code, *e, *le,  // current position in emitted code (e: 目前機器碼指標, le: 上一行機器碼指標)
     *id,      // currently parsed identifier (id: 目前的 id)
-    *sym, *symObj, // symbol table (simple list of identifiers) (符號表)
+    *sym,     // symbol table (simple list of identifiers) (符號表)
     tk,       // current token (目前 token)
     ival,     // current token value (目前的 token 值)
     ty,       // current expression type (目前的運算式型態)
@@ -87,23 +85,6 @@ int *sym_add(char *name, int len) {
   id[Hash] = h; // id.Hash = 雜湊值
   id[Tk] = Id;  // id.Tk = Id
   return id;
-}
-
-enum { OName, OClass, OSize };
-
-int sym_to_obj() {
-  int *id, *objp;
-  id = sym; objp = symObj;
-  while (id[Tk]) {
-    if (id[Class]==Glo || id[Class]==Fun) {
-      printf("sym:name=%s\n", (char*) id[Name]);
-      objp[Name] = id[Name] - (int) st;
-      objp[Class] = id[Class];
-      objp = objp + OSize;
-    }
-    id = id + Idsz; // 碰撞，前進到下一格。
-  }
-  return (objp-symObj)*sizeof(int);
 }
 
 void next() // 詞彙解析 lexer
@@ -555,26 +536,71 @@ int vm_main(int *pc, int argc, char **argv) {
   return 0;
 }
 
+// C:Code, D:Data, T:St, S:Sym, 
+// P:Pointer, L:Length, O:Offset 
+enum { C, D, T, S, HSize };
+enum { P, L, O, F }; // F: Fields
+enum { SName, SClass, SSize };
+enum { W=4 }; // Word: W = sizeof(int)
+
+int sym_to_obj(char *o) {
+  int *id; int *objp; objp = (int*) o;
+  id = sym;
+  while (id[Tk]) {
+    if (id[Class]==Glo || id[Class]==Fun) {
+      printf("sym:name=%s\n", (char*) id[Name]);
+      objp[SName] = id[Name] - (int) st;
+      objp[SClass] = id[Class];
+      objp = objp + SSize;
+    }
+    id = id + Idsz; // 碰撞，前進到下一格。
+  }
+  return (char*)objp-o;
+}
+
 int obj_save() {
-  int fd, i, codeLen, dataLen, stLen, symLen, headLen, objLen, *head; // , symLen;
+  int fd, codeLen, dataLen, stLen, symLen, headLen, *h, *hc, *hd, *ht, *hs; char *o;
 
-  head = obj; headLen = HeadSize*HeadFields*sizeof(int); i = headLen;
-  codeLen = (int)(e-code);     head[Code+Offset] = i; memcpy(obj+i, code, codeLen); i = i + codeLen; 
-  dataLen = (int)(datap-data); head[Data+Offset] = i; memcpy(obj+i, data, dataLen); i = i + dataLen;
-  stLen = (int)(stp-st);       head[St+Offset]   = i; memcpy(obj+i, st,   stLen  ); i = i + stLen;
-  symLen = sym_to_obj(&obj[i]);head[Sym+Offset] = i;  i = i + symLen;
-  objLen = i;
+  h=(int*)obj; hc=h+C*F; hd=h+D*F; ht=h+T*F; hs=h+S*F; headLen = HSize*F*W; o=obj+headLen;
+  codeLen = (int)(e-code)*sizeof(int); dataLen = (int)(datap-data); stLen = (int)(stp-st); 
+  hc[P]=(int)code; hc[L] = codeLen; hc[O] = o-obj; // memcpy(o, code, codeLen); o = o + codeLen;
+  hd[P]=(int)data; hd[L] = dataLen; hd[O] = o-obj; // memcpy(o, data, dataLen); o = o + dataLen;
+  ht[P]=(int)st;   ht[L] = stLen;   ht[O] = o-obj; memcpy(o, st,   stLen  ); o = o + stLen;
 
+  symLen = sym_to_obj(o);
+  hs[P] =(int)o;  hs[L] = symLen;  hs[O] = o-obj; o = o + symLen;
+  printf("obj_save(): codeLen=%d dataLen=%d stLen=%d symLen=%d\n", codeLen, dataLen, stLen, symLen);
+  // printf("obj_save(): hc[L]=%d hd[L]=%d\n", hc[L], hd[L]);
   // printf("oFile=%s\n", oFile);
   // printf("codeLen=%d dataLen=%d stLen=%d symLen=%d\n", codeLen, dataLen, stLen, symLen);
   if ((fd = open(oFile, O_WRITE, 0644)) < 0) { printf("could not open(%s)\n", oFile); return -1; }
-  write(fd, &obj, objLen);
+  write(fd, obj, o-obj); // &obj
   close(fd);
   return 0;
 }
 
 int obj_load() {
-  return 0;
+  int fd, objLen; // , *h;
+  if ((fd = open(oFile, O_READ, 0644)) < 0) { printf("could not open(%s)\n", oFile); return -1; }
+  objLen = read(fd, obj, poolsz); // h = (int*) obj;
+  // code = (int*)h[C+P]; data = (char*)h[D+P]; st = (char*)h[T+P]; sym = (int*)h[S+P];
+  close(fd);
+  return objLen;
+}
+
+int obj_dump() {
+  int headLen, objLen, codeLen, dataLen, stLen, symLen, *h, *hc, *hd, *ht, *hs;
+  int *cp0, *cp; char *dp0, *dp, *o;
+  objLen = obj_load(); 
+  h=(int*)obj; hc=h+C*F; hd=h+D*F; ht=h+T*F; hs=h+S*F; headLen = HSize*F*W; o=obj+headLen;
+  cp0 = (int*)hc[P]; dp0 = (char*)hd[P]; 
+  codeLen = hc[L]; code = (int*)(obj+hc[O]);
+  dataLen = hd[L]; data = (char*)(obj+hd[O]);
+  stLen   = ht[L]; st   = (char*)(obj+ht[O]);
+  symLen  = hs[L]; sym  = (int*)(obj+hs[O]);
+  printf("obj_dump(): codeLen=%d dataLen=%d stLen=%d symLen=%d\n", codeLen, dataLen, stLen, symLen);
+  printf("st=%s\n", st);
+  // printf("dp=%s", dp);
 }
 
 int cc_main(char *file) {
@@ -614,13 +640,13 @@ int main(int argc, char **argv) // 主程式
   cFile = *argv;
 
   poolsz = 256*1024;
-  if (!(source = lp = p = malloc(poolsz))) { printf("could not malloc(%d) source area\n", poolsz); return -1; } // C 程式碼
+  if (!(source = malloc(poolsz))) { printf("could not malloc(%d) source area\n", poolsz); return -1; } // C 程式碼
   if (!(sym = malloc(poolsz))) { printf("could not malloc(%d) symbol area\n", poolsz); return -1; } // 符號段
   if (!(code = le = e = malloc(poolsz))) { printf("could not malloc(%d) text area\n", poolsz); return -1; } // 程式段
   if (!(data = datap = malloc(poolsz))) { printf("could not malloc(%d) data area\n", poolsz); return -1; } // 資料段
   if (!(st = stp = malloc(poolsz))) { printf("could not malloc(%d) st area\n", poolsz); return -1; } // 字串表
   if (!(stack = malloc(poolsz))) { printf("could not malloc(%d) stack area\n", poolsz); return -1; }  // 堆疊段
-  if (!(symObj = malloc(poolsz))) { printf("could not malloc(%d) symbol area\n", poolsz); return -1; } // symObj
+  if (!(obj = malloc(poolsz))) { printf("could not malloc(%d) symbol area\n", poolsz); return -1; } // 目的檔。
 
   memset(sym,  0, poolsz);
   memset(code, 0, poolsz);
@@ -631,6 +657,7 @@ int main(int argc, char **argv) // 主程式
 
   if (output) {
     obj_save();
+    obj_dump();
   } else {
     vm_main(pc, argc, argv);
   }
