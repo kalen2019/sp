@@ -634,72 +634,50 @@ int obj_read() {
   if ((fd = open(oFile, O_READ, 0644)) < 0) { printf("could not open(%s)\n", oFile); return -1; }
   objLen = read(fd, obj, poolsz); // 這裡如果用 Mingw32 的 read() 會有讀到《結束字元》就停止的問題，因此改用 c6.h 裡的 fread(..."rb") 定義。
   close(fd);
-  printf("obj_read(): oFile=%s objLen=%d\n", oFile, objLen);
+  // printf("obj_load: objLen=%d poolsz=%d\n", objLen, poolsz);
   return objLen;
 }
 
-int headLen, objLen, codeLen, dataLen, relLen, stLen, symLen, *h, *hh, *hc, *hd, *hr, *ht, *hs, *code0;
-char *data0;
+int obj_load() {
+  int headLen, objLen, codeLen, dataLen, relLen, stLen, symLen, len, *h, *hh, *hc, *hd, *hr, *ht, *hs, *id;
+  int *code0, *cp; char *data0, *dp, *o, *name;
 
-void obj_head() {
-  h=(int*)obj; hh=h+H*F; hc=h+C*F; hd=h+D*F; hr=h+R*F; ht=h+T*F; hs=h+S*F; headLen = Sections*F*W;
+  objLen = obj_read(); 
+
+  h=(int*)obj; hh=h+H*F; hc=h+C*F; hd=h+D*F; hr=h+R*F; ht=h+T*F; hs=h+S*F; headLen = Sections*F*W; o=obj+headLen;
+
+  // printf("pc=%d code=%d entry=%d\n", pc, code, hh[Entry]);
   code0 = (int*)hc[P]; data0 = (char*)hd[P];
   codeLen = hc[L]; code = (int*)(obj+hc[O]);
   dataLen = hd[L]; data = (char*)(obj+hd[O]);
   relLen  = hr[L]; rel = (int*)(obj+hr[O]);
   stLen   = ht[L]; st   = (char*)(obj+ht[O]);
   symLen  = hs[L]; sym  = (int*)(obj+hs[O]);
-  printf("obj_head(): codeLen=%d dataLen=%d relLen=%d stLen=%d symLen=%d objLen=%d\n", codeLen, dataLen, relLen, stLen, symLen, objLen);
-  printf("obj_head(): hc[O]=%d hd[O]=%d hr[O]=%d ht[O]==%d hs[O]=%d\n", hc[O], hd[O], hr[O], ht[O], hs[O]);
+  // printf("obj_load(): codeLen=%d dataLen=%d relLen=%d stLen=%d symLen=%d objLen=%d\n", codeLen, dataLen, relLen, stLen, symLen, objLen);
+  // printf("obj_load(): hc[O]=%d hd[O]=%d hr[O]=%d ht[O]==%d hs[O]=%d\n", hc[O], hd[O], hr[O], ht[O], hs[O]);
+
   pc = code + hh[Entry];
-  printf("obj_head:pc=%d code=%d entry=%d data=%d\n", (int)pc, (int)code, hh[Entry], (int)data);
-  printf("obj_head:code0=%d data0=%d\n", (int)code0, (int)data0);
-}
 
-void obj_load() {
-  int len, *cp;
-  objLen = obj_read(); 
-  obj_head();
-
-  // relocate -- 重定位。
-  len = relLen/W;
-  relp = rel;
-  // printf("obj_load():code=%d data=%d code0=%d data0=%d\n", (int)code, (int)data, (int)code0, (int)data0);
-  while (relp - rel < len) {
-    // printf("rel:offset=%d\n", *relp);
-    cp = code + *relp++; // offset
-    // printf("=>rel:old:*cp=%d\n", *cp);
-    // printf("rel:type=%d\n", *relp);
-    if (*relp++ == RCode) { // type
-      *cp = (int) (((int*)(*cp)-code0) + code);
-      // printf("RCode\n");
-    } else {
-      *cp = (int) (((char*)(*cp)-data0) + data);
-      // printf("RData\n");
-    }
-    // printf("=>rel:new:*cp=%d\n", *cp);
-  }
-}
-
-void obj_dump() {
-  int len, *id; char *name;
   len = symLen/W;
   id = sym;
   while (id - sym < len) {
     name = (char*) (st+id[SName]);
-    printf("%s %d\n", name, id[SClass]);
+    // printf("%s %d\n", name, id[SClass]);
     id = id + SSize;
   }
+
+  len = relLen/W;
+  relp = rel;
+  while (relp - rel < len) {
+    cp = code + *relp++; // offset
+    if (*relp++ == RCode) // type
+      *cp = *cp+code-code0; else *cp = *cp+data-data0;
+  }
+  // printf("obj_load:end:pc=%d code=%d\n", pc, code);
 }
 
-int main(int argc, char **argv) { // 主程式
-  poolsz = 256*1024;
-  if (!(obj = malloc(poolsz))) { printf("could not malloc(%d) symbol area\n", poolsz); return -1; } // 目的檔。
-  memset(obj,  0, poolsz);
-  if (!(stack = malloc(poolsz))) { printf("could not malloc(%d) stack area\n", poolsz); return -1; }  // 堆疊段
-  memset(stack,0, poolsz);
-
-#ifdef __CC__
+int main(int argc, char **argv) // 主程式
+{
   --argc; ++argv;
   if (argc > 0 && **argv == '-' && (*argv)[1] == 's') { src = 1; --argc; ++argv; }
   if (argc > 0 && **argv == '-' && (*argv)[1] == 'd') { debug = 1; --argc; ++argv; }
@@ -707,20 +685,26 @@ int main(int argc, char **argv) { // 主程式
   if (argc < 1) { printf("usage: c6 [-s] [-d] file ...\n"); return -1; }
   cFile = *argv;
 
+  poolsz = 128*1024; // 256*1024;
   if (!(source = malloc(poolsz))) { printf("could not malloc(%d) source area\n", poolsz); return -1; } // C 程式碼
   if (!(sym = malloc(poolsz))) { printf("could not malloc(%d) symbol area\n", poolsz); return -1; } // 符號段
   if (!(code = le = e = malloc(poolsz))) { printf("could not malloc(%d) text area\n", poolsz); return -1; } // 程式段
   if (!(data = datap = malloc(poolsz))) { printf("could not malloc(%d) data area\n", poolsz); return -1; } // 資料段
   if (!(st = stp = malloc(poolsz))) { printf("could not malloc(%d) st area\n", poolsz); return -1; } // 字串表
   if (!(rel = relp = malloc(poolsz))) { printf("could not malloc(%d) rel area\n", poolsz); return -1; } // 重定位表
+  if (!(stack = malloc(poolsz))) { printf("could not malloc(%d) stack area\n", poolsz); return -1; }  // 堆疊段
+  if (!(obj = malloc(poolsz))) { printf("could not malloc(%d) symbol area\n", poolsz); return -1; } // 目的檔。
 
   memset(code, 0, poolsz);
   memset(data, 0, poolsz);
   memset(rel,  0, poolsz);
   memset(st,   0, poolsz);
   memset(sym,  0, poolsz);
+  memset(stack,0, poolsz);
+  memset(obj,  0, poolsz);
 
   cc_main(cFile);
+
   if (output) {
     obj_save();
     obj_load();
@@ -728,8 +712,4 @@ int main(int argc, char **argv) { // 主程式
   } else {
     vm_main(pc, argc, argv);
   }
-#endif
-
-#include "vm.c"
-#include "objdump.c"
 }
