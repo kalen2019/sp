@@ -8,18 +8,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <memory.h>
-// #include <unistd.h>
-// #include <fcntl.h>
-#include "c6.h"
+#include <unistd.h>
+#include <fcntl.h>
 
 // ----------- ccc add ----------------
-int *stack,       // 堆疊段
-    *rel, *relp,  // 重定位紀錄
-    output;       // 輸出目的檔 
-char *st, *stp,   // 字串表, 字串表指標
-     *ops;        // 運算列表。
+int *stack, // 堆疊段
+    *rel, *relp,   // 重定位紀錄
+    output; // 輸出目的檔 
+char *st, *stp, // 字串表, 字串表指標
+     *ops;      // 運算列表。
 char *cFile, *oFile;
-char *obj;        // 目的檔
+char *obj; // 目的檔
 enum { RCode, RData }; // RCode: 程式重定位, RData 資料重定位。
 enum { O_READ=0, O_WRITE = 769 }; // O_READ: 讀取模式, O_WRITE: 寫入模式, 769 = O_WRONLY|O_CREAT|O_TRUNC
 // ----------- ccc ----------------
@@ -178,10 +177,7 @@ void expr(int lev) // 運算式 expression, 其中 lev 代表優先等級
   if (!tk) { printf("%d: unexpected eof in expression\n", line); exit(-1); } // EOF
   else if (tk == Num) { *++e = IMM; *++e = ival; next(); ty = INT; } // 數值
   else if (tk == '"') { // 字串
-    *++e = IMM; *++e = ival; 
-    // printf("ccc:expr:string ival=%d data=%d\n", ival, data);
-    *relp++ = (e-code); *relp++ = RData; // add by ccc, 字串立即值的修改紀錄。
-    next();
+    *++e = IMM; *++e = ival; next();
     while (tk == '"') next();
     datap = (char *)(((int)datap + sizeof(int)) & -sizeof(int)); ty = PTR; // 用 int 為大小對齊 ??
   }
@@ -204,8 +200,7 @@ void expr(int lev) // 運算式 expression, 其中 lev 代表優先等級
       if (d[Class] == Sys) *++e = d[Val]; // token 是系統呼叫 ???
       else if (d[Class] == Fun) { // token 是自訂函數，用 JSR : jump to subroutine 指令呼叫
         *++e = JSR; *++e = d[Val];
-        *relp++ = e-code; *relp++ = RCode; // add by ccc: 加入重定位紀錄。
-        // printf("ccc:expr:Fun:e=%d code=%d\n", e, code);
+        // *relp++ = e-code; *relp++ = RCode; // add by ccc: 加入重定位紀錄。
       }
       else { printf("%d: bad function call\n", line); exit(-1); }
       if (t) { *++e = ADJ; *++e = t; } // 有參數，要調整堆疊  (ADJ : stack adjust)
@@ -517,7 +512,6 @@ int vm_run(int *pc, int *bp, int *sp) { // 虛擬機 => pc: 程式計數器, sp:
   while (1) {
     i = *pc++; ++cycle;
     if (debug) {
-      // printf("pc=%d code=%d\n", pc, code);
       printf("%d> %04d:%.4s", cycle, (pc-code-1), &ops[i * 5]); // 印出該行執行訊息; &OP[i * 5] 為運算符號 OP="LEA ,IMM ,JMP..."
       if (i <= ADJ) printf(" %d\n", *pc); else printf("\n");
     }
@@ -583,11 +577,9 @@ int vm_main(int *pc, int argc, char **argv) {
 }
 
 // ------------------------ obj : 目的檔 ------------------------
-enum { H, C, D, T, S, R, Sections }; // H:Header, C:Code, D:Data, R: Rel, T:St, S:Sym, HSects: Sections
+enum { C, D, T, S, R, Sections }; // C:Code, D:Data, R: Rel, T:St, S:Sym, HSects: Sections
 enum { P, L, O, F }; // P:Pointer, L:Length, O:Offset, F: Fields
-enum { Entry=0 };
 enum { SName, SClass, SSize };
-enum { ROffset, RType };
 enum { W=4 }; // Word: W = sizeof(int)
 
 int sym_to_obj(char *o) {
@@ -595,7 +587,7 @@ int sym_to_obj(char *o) {
   id = sym;
   while (id[Tk]) {
     if (id[Class]==Glo || id[Class]==Fun) {
-      // printf("sym:name=%s\n", (char*) id[Name]);
+      printf("sym:name=%s\n", (char*) id[Name]);
       objp[SName] = id[Name] - (int) st;
       objp[SClass] = id[Class];
       objp = objp + SSize;
@@ -606,14 +598,10 @@ int sym_to_obj(char *o) {
 }
 
 int obj_save() {
-  int fd, codeLen, dataLen, relLen, stLen, symLen, headLen, objLen, *h, *hh, *hc, *hd, *hr, *ht, *hs; char *o;
+  int fd, codeLen, dataLen, relLen, stLen, symLen, headLen, objLen, *h, *hc, *hd, *hr, *ht, *hs; char *o;
 
-  // printf("obj_save(): entry=%d\n", pc-code);
-  h=(int*)obj; hh=h+H*F; hc=h+C*F; hd=h+D*F; hr=h+R*F; ht=h+T*F; hs=h+S*F; headLen = Sections*F*W; o=obj+headLen;
+  h=(int*)obj; hc=h+C*F; hd=h+D*F; hr=h+R*F; ht=h+T*F; hs=h+S*F; headLen = Sections*F*W; o=obj+headLen;
   codeLen = (int)(e-code)*W; dataLen = (int)(datap-data); relLen = (int)(relp-rel)*W; stLen = (int)(stp-st);
-  // printf("obj_save(): codeLen=%d dataLen=%d relLen=%d stLen=%d symLen=%d objLen=%d\n", codeLen, dataLen, relLen, stLen, symLen, objLen);
-
-  hh[Entry] = pc-code;
   hc[P]=(int)code; hc[L] = codeLen; hc[O] = o-obj; memcpy(o, code, codeLen); o = o + codeLen;
   hd[P]=(int)data; hd[L] = dataLen; hd[O] = o-obj; memcpy(o, data, dataLen); o = o + dataLen;
   hr[P]=(int)rel;  hr[L] = relLen;  hr[O] = o-obj; memcpy(o, rel,  relLen);  o = o + relLen;
@@ -622,58 +610,41 @@ int obj_save() {
   symLen = sym_to_obj(o);
   hs[P] =(int)o;  hs[L] = symLen;  hs[O] = o-obj; o = o + symLen;
   objLen = o-obj;
-  // printf("obj_save(): codeLen=%d dataLen=%d relLen=%d stLen=%d symLen=%d objLen=%d\n", codeLen, dataLen, relLen, stLen, symLen, objLen);
+  printf("obj_save(): codeLen=%d dataLen=%d relLen=%d stLen=%d symLen=%d headLen=%d objLen=%d\n", codeLen, dataLen, relLen, stLen, symLen, headLen, objLen);
   if ((fd = open(oFile, O_WRITE, 0644)) < 0) { printf("could not open(%s)\n", oFile); return -1; }
   write(fd, obj, objLen);
   close(fd);
   return 0;
 }
 
-int obj_read() {
+int obj_load() {
   int fd, objLen;
   if ((fd = open(oFile, O_READ, 0644)) < 0) { printf("could not open(%s)\n", oFile); return -1; }
-  objLen = read(fd, obj, poolsz); // 這裡如果用 Mingw32 的 read() 會有讀到《結束字元》就停止的問題，因此改用 c6.h 裡的 fread(..."rb") 定義。
+  objLen = read(fd, obj, poolsz);
   close(fd);
-  // printf("obj_load: objLen=%d poolsz=%d\n", objLen, poolsz);
+  printf("obj_load: objLen=%d poolsz=%d\n", objLen, poolsz);
   return objLen;
 }
 
-int obj_load() {
-  int headLen, objLen, codeLen, dataLen, relLen, stLen, symLen, len, *h, *hh, *hc, *hd, *hr, *ht, *hs, *id;
-  int *code0, *cp; char *data0, *dp, *o, *name;
-
-  objLen = obj_read(); 
-
-  h=(int*)obj; hh=h+H*F; hc=h+C*F; hd=h+D*F; hr=h+R*F; ht=h+T*F; hs=h+S*F; headLen = Sections*F*W; o=obj+headLen;
-
-  // printf("pc=%d code=%d entry=%d\n", pc, code, hh[Entry]);
-  code0 = (int*)hc[P]; data0 = (char*)hd[P];
+int obj_dump() {
+  int headLen, objLen, codeLen, dataLen, relLen, stLen, symLen, symCount, *h, *hc, *hd, *hr, *ht, *hs, *id;
+  int *cp0, *cp; char *dp0, *dp, *o, *name;
+  objLen = obj_load(); 
+  h=(int*)obj; hc=h+C*F; hd=h+D*F; hr=h+R*F; ht=h+T*F; hs=h+S*F; headLen = Sections*F*W; o=obj+headLen;
+  cp0 = (int*)hc[P]; dp0 = (char*)hd[P]; 
   codeLen = hc[L]; code = (int*)(obj+hc[O]);
   dataLen = hd[L]; data = (char*)(obj+hd[O]);
   relLen  = hr[L]; rel = (int*)(obj+hr[O]);
   stLen   = ht[L]; st   = (char*)(obj+ht[O]);
   symLen  = hs[L]; sym  = (int*)(obj+hs[O]);
-  // printf("obj_load(): codeLen=%d dataLen=%d relLen=%d stLen=%d symLen=%d objLen=%d\n", codeLen, dataLen, relLen, stLen, symLen, objLen);
-  // printf("obj_load(): hc[O]=%d hd[O]=%d hr[O]=%d ht[O]==%d hs[O]=%d\n", hc[O], hd[O], hr[O], ht[O], hs[O]);
-
-  pc = code + hh[Entry];
-
-  len = symLen/W;
+  printf("obj_dump(): codeLen=%d dataLen=%d relLen=%d stLen=%d symLen=%d objLen=%d\n", codeLen, dataLen, relLen, stLen, symLen, objLen);
+  symCount = symLen/W;
   id = sym;
-  while (id - sym < len) {
+  while (id - sym < symCount) {
     name = (char*) (st+id[SName]);
     // printf("%s %d\n", name, id[SClass]);
     id = id + SSize;
   }
-
-  len = relLen/W;
-  relp = rel;
-  while (relp - rel < len) {
-    cp = code + *relp++; // offset
-    if (*relp++ == RCode) // type
-      *cp = *cp+code-code0; else *cp = *cp+data-data0;
-  }
-  // printf("obj_load:end:pc=%d code=%d\n", pc, code);
 }
 
 int main(int argc, char **argv) // 主程式
@@ -700,15 +671,12 @@ int main(int argc, char **argv) // 主程式
   memset(rel,  0, poolsz);
   memset(st,   0, poolsz);
   memset(sym,  0, poolsz);
-  memset(stack,0, poolsz);
-  memset(obj,  0, poolsz);
 
   cc_main(cFile);
 
   if (output) {
     obj_save();
-    obj_load();
-    vm_main(pc, argc, argv);
+    obj_dump();
   } else {
     vm_main(pc, argc, argv);
   }
