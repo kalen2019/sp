@@ -8,4 +8,5 @@ int f(n) {
 
 int main() {
   printf("f(7)=%d\n", f(7));
+  return 0;
 }

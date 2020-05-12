@@ -1,5 +1,99 @@
 ## 
 
+PS D:\ccc\course\sp\code\c\xss\c6> ./cc test/hello.c     
+hello, world
+exit(0) cycle = 9
+PS D:\ccc\course\sp\code\c\xss\c6> ./cc c6.c test/hello.c
+9: bad global declaration
+
+
+## 
+
+fib 最後沒有 LEV 
+
+查清楚原因後，發現 fib.c 的 main() 沒有 return, 因此沒有產生
+11:   return 0;
+    IMM  0
+    LEV)
+
+而且若 檔尾沒換行的話，也會造成沒有最後一個 LEV。
+
+```
+9: int main() {
+10:   printf("f(7)=%d\n", f(7));
+    ENT  0
+    IMM  12058712
+    PSH
+    IMM  7
+    PSH
+    JSR  11796564
+    ADJ  1
+    PSH
+    PRTF
+    ADJ  2
+f(7)=13
+exit(8) cycle = 920
+```
+
+其他的都有
+
+```
+PS D:\ccc\course\sp\code\c\xss\c6> ./cc -s test/hello.c
+1: #include <stdio.h>
+3: int main()
+4: {
+5:   printf("hello, world\n");
+    ENT  0
+    IMM  12910680
+    PSH
+    PRTF
+    ADJ  1
+6:   return 0;
+    IMM  0
+    LEV
+7: }
+    LEV
+hello, world
+exit(0) cycle = 9
+
+13:   }
+14:   return s;
+    JMP  -36
+    LEA  -1
+    LI
+    LEV
+15: }
+    LEV
+16:
+17: int main() {
+18:   printf("main:enter\n");
+    ENT  0
+    IMM  13107300
+    PSH
+    PRTF
+    ADJ  1
+19:   printf("sum(10)=%d\n", sum(10));
+    IMM  13107312
+    PSH 
+    PSH
+    JSR  12845140
+    ADJ  1 
+    PSH
+    PRTF
+    ADJ  2
+20:   return 0;
+    IMM  0
+    LEV
+21: }
+    LEV
+main:enter
+sum:enter
+sum(10)=55
+exit(0) cycle = 311
+```
+
+## 
+
 hello, sum, 成功了
 
 但 fib 出來前失敗了 (unknown instruction = 691480678)。
