@@ -1,5 +1,10 @@
 ## 
 
+PS D:\ccc\course\sp\code\c\xss\c6> ./cc c6.c test/fib.c   
+619: bad expression
+
+## 
+
 PS D:\ccc\course\sp\code\c\xss\c6> ./cc -o test/fib.o test/fib.c
 f(7)=13
 unknown instruction = 691480678! cycle = 918   <-- 注意，這個 cycle 只有 918，而非下面的 920 ，所以似乎少了一個指令。

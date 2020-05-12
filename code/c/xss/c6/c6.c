@@ -616,7 +616,7 @@ int obj_save() {
 
   // printf("obj_save(): entry=%d\n", pc-code);
   h=(int*)obj; hh=h+H*F; hc=h+C*F; hd=h+D*F; hr=h+R*F; ht=h+T*F; hs=h+S*F; headLen = Sections*F*W; o=obj+headLen;
-  codeLen = (int)(e+1-code)*W; /*bug: (int)(e-code)*W;*/ dataLen = (int)(datap-data); relLen = (int)(relp-rel)*W; stLen = (int)(stp-st);
+  codeLen = (int)(e+1-code)*W; dataLen = (int)(datap-data); relLen = (int)(relp-rel)*W; stLen = (int)(stp-st); // bug: (int)(e-code)*W;
   // printf("obj_save(): codeLen=%d dataLen=%d relLen=%d stLen=%d symLen=%d objLen=%d\n", codeLen, dataLen, relLen, stLen, symLen, objLen);
 
   hh[Entry] = pc-code;
