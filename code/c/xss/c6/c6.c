@@ -8,8 +8,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <memory.h>
-// #include <unistd.h>
-// #include <fcntl.h>
+#include <unistd.h>
+#include <fcntl.h>
 #include "c6.h"
 
 // ----------- ccc add ----------------
@@ -387,6 +387,7 @@ int prog() { // 編譯整個程式 Program
   next();
   while (tk) {
     bt = INT; // basetype
+    // printf("=> prog: tk=%d\n", tk);
     if (tk == Int) next();
     else if (tk == Char) { next(); bt = CHAR; }
     else if (tk == Enum) { // enum Id? {... 列舉
@@ -409,11 +410,16 @@ int prog() { // 編譯整個程式 Program
         }
         next();
       }
+      // else { printf("%d: bad decl, %d, not [Int(%d), Char(%d), Enum(%d)]\n", tk, Int, Char, Enum, line); return -1; }
     }
     while (tk != ';' && tk != '}') { // 掃描直到區塊結束
       ty = bt;
       while (tk == Mul) { next(); ty = ty + PTR; }
-      if (tk != Id) { printf("%d: bad global declaration\n", line); return -1; }
+      if (tk != Id) { 
+        printf("bt=%d tk=%d!=Id(%d) name=%s\n", bt, tk, Id, (char*)(id[Name]));
+        printf("%d: bad global declaration\n", line);
+        return -1;
+      }
       if (id[Class]) { printf("%d: duplicate global definition\n", line); return -1; } // id.Class 已經存在，重複宣告了！
       next();
       id[Type] = ty;
@@ -498,7 +504,7 @@ int cc_main(char *file) {
 
   lp = p = source;
   if ((i = read(fd, p, poolsz-1)) <= 0) { printf("read() returned %d\n", i); return -1; }
-  p[i++] = '\n'; p[i++] = '\0'; // 設定程式 p 字串結束符號 \0
+  p[i++] = '\n'; p[i++] = 0; // 設定程式 p 字串結束符號 0 (不能用 \0, 因為 c6 不支援 \0)
   close(fd);
 
   if (prog() == -1) return -1;
@@ -610,7 +616,7 @@ int obj_save() {
 
   // printf("obj_save(): entry=%d\n", pc-code);
   h=(int*)obj; hh=h+H*F; hc=h+C*F; hd=h+D*F; hr=h+R*F; ht=h+T*F; hs=h+S*F; headLen = Sections*F*W; o=obj+headLen;
-  codeLen = (int)(e-code)*W; dataLen = (int)(datap-data); relLen = (int)(relp-rel)*W; stLen = (int)(stp-st);
+  codeLen = (int)(e+1-code)*W; /*bug: (int)(e-code)*W;*/ dataLen = (int)(datap-data); relLen = (int)(relp-rel)*W; stLen = (int)(stp-st);
   // printf("obj_save(): codeLen=%d dataLen=%d relLen=%d stLen=%d symLen=%d objLen=%d\n", codeLen, dataLen, relLen, stLen, symLen, objLen);
 
   hh[Entry] = pc-code;
@@ -634,7 +640,7 @@ int obj_read() {
   if ((fd = open(oFile, O_READ, 0644)) < 0) { printf("could not open(%s)\n", oFile); return -1; }
   objLen = read(fd, obj, poolsz); // 這裡如果用 Mingw32 的 read() 會有讀到《結束字元》就停止的問題，因此改用 c6.h 裡的 fread(..."rb") 定義。
   close(fd);
-  printf("obj_read(): oFile=%s objLen=%d\n", oFile, objLen);
+  // printf("obj_read(): oFile=%s objLen=%d\n", oFile, objLen);
   return objLen;
 }
 
@@ -649,11 +655,11 @@ void obj_head() {
   relLen  = hr[L]; rel = (int*)(obj+hr[O]);
   stLen   = ht[L]; st   = (char*)(obj+ht[O]);
   symLen  = hs[L]; sym  = (int*)(obj+hs[O]);
-  printf("obj_head(): codeLen=%d dataLen=%d relLen=%d stLen=%d symLen=%d objLen=%d\n", codeLen, dataLen, relLen, stLen, symLen, objLen);
-  printf("obj_head(): hc[O]=%d hd[O]=%d hr[O]=%d ht[O]==%d hs[O]=%d\n", hc[O], hd[O], hr[O], ht[O], hs[O]);
+  // printf("obj_head(): codeLen=%d dataLen=%d relLen=%d stLen=%d symLen=%d objLen=%d\n", codeLen, dataLen, relLen, stLen, symLen, objLen);
+  // printf("obj_head(): hc[O]=%d hd[O]=%d hr[O]=%d ht[O]==%d hs[O]=%d\n", hc[O], hd[O], hr[O], ht[O], hs[O]);
   pc = code + hh[Entry];
-  printf("obj_head:pc=%d code=%d entry=%d data=%d\n", (int)pc, (int)code, hh[Entry], (int)data);
-  printf("obj_head:code0=%d data0=%d\n", (int)code0, (int)data0);
+  // printf("obj_head:pc=%d code=%d entry=%d data=%d\n", (int)pc, (int)code, hh[Entry], (int)data);
+  // printf("obj_head:code0=%d data0=%d\n", (int)code0, (int)data0);
 }
 
 void obj_load() {
@@ -704,7 +710,7 @@ int main(int argc, char **argv) { // 主程式
   if (argc > 0 && **argv == '-' && (*argv)[1] == 's') { src = 1; --argc; ++argv; }
   if (argc > 0 && **argv == '-' && (*argv)[1] == 'd') { debug = 1; --argc; ++argv; }
   if (argc > 0 && **argv == '-' && (*argv)[1] == 'o') { output = 1; --argc; ++argv; oFile = *argv++; --argc; }
-  if (argc < 1) { printf("usage: c6 [-s] [-d] file ...\n"); return -1; }
+  if (argc < 1) { printf("usage: cc [-s] [-d] file ...\n"); return -1; }
   cFile = *argv;
 
   if (!(source = malloc(poolsz))) { printf("could not malloc(%d) source area\n", poolsz); return -1; } // C 程式碼

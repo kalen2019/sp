@@ -4,7 +4,6 @@
 int sum(int n) {
   int s;
   int i;
-  printf("sum:enter\n");
   s=0;
   i=1;
   while (i <= n) {
@@ -15,7 +14,5 @@ int sum(int n) {
 }
 
 int main() {
-  printf("main:enter\n");
   printf("sum(10)=%d\n", sum(10));
-  return 0;
 }

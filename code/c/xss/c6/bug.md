@@ -1,5 +1,20 @@
 ## 
 
+PS D:\ccc\course\sp\code\c\xss\c6> ./cc -o test/fib.o test/fib.c
+f(7)=13
+unknown instruction = 691480678! cycle = 918   <-- 注意，這個 cycle 只有 918，而非下面的 920 ，所以似乎少了一個指令。
+
+
+但是
+
+PS D:\ccc\course\sp\code\c\xss\c6> ./cc test/fib.c   
+f(7)=13
+exit(8) cycle = 920
+
+沒事！
+
+## 
+
 PS D:\ccc\course\sp\code\c\xss\c6> ./cc test/hello.c     
 hello, world
 exit(0) cycle = 9
