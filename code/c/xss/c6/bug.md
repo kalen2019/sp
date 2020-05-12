@@ -1,5 +1,13 @@
 ## 
 
+PS D:\ccc\course\sp\code\c\xss\c6> ./vm test/fib.o
+PS D:\ccc\course\sp\code\c\xss\c6> ./objdump test/fib.o
+ 33024
+ 33024
+PS D:\ccc\course\sp\code\c\xss\c6> ./objdump test/sum.o
+
+## 
+
 PS D:\ccc\course\sp\code\c\xss\c6> ./cc c6.c test/fib.c   
 619: bad expression
 

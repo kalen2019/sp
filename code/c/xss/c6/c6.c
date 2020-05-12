@@ -729,8 +729,8 @@ int main(int argc, char **argv) { // 主程式
   cc_main(cFile);
   if (output) {
     obj_save();
-    obj_load();
-    vm_main(pc, argc, argv);
+    // obj_load();
+    // vm_main(pc, argc, argv);
   } else {
     vm_main(pc, argc, argv);
   }

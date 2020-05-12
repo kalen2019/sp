@@ -65,14 +65,23 @@ hello, world
 exit(0) cycle = 9
 ```
 
-施工中
+## 目前測試
 
 ```
-PS D:\ccc\course\sp\code\c\xss\c6> gcc -m32 -Wall c6.c -o c6    
-PS D:\ccc\course\sp\code\c\xss\c6> ./c6 -o test/var.o test/var.c
-oFile=test/var.o
-codeLen=12 dataLen=28 stLen=160
-sym:name=a
-sym:name=b
-sym:name=c
+PS D:\ccc\course\sp\code\c\xss\c6> make
+gcc -D__VM__ -Wall -std=gnu99 -o vm c6.c
+gcc -D__OBJDUMP__ -Wall -std=gnu99 -o objdump c6.c
+
+PS D:\ccc\course\sp\code\c\xss\c6> ./cc -o test/hello.o test/hello.c
+PS D:\ccc\course\sp\code\c\xss\c6> ./cc -o test/sum.o test/sum.c    
+PS D:\ccc\course\sp\code\c\xss\c6> ./cc -o test/fib.o test/fib.c    
+PS D:\ccc\course\sp\code\c\xss\c6> ./vm test/fib.o
+f(7)=13
+exit(8) cycle = 920
+PS D:\ccc\course\sp\code\c\xss\c6> ./vm test/sum.o
+sum(10)=55
+exit(11) cycle = 302
+PS D:\ccc\course\sp\code\c\xss\c6> ./vm test/hello.o
+hello, world
+exit(0) cycle = 9
 ```
