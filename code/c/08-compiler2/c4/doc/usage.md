@@ -8,14 +8,14 @@ $ gcc -m32 c4.c -o c4
 
 ## 範例: hello.c
 
-* https://github.com/cccbook/c4/blob/master/hello.c
+* [hello.c](../test/hello.c)
 
 ```
-$ ./c4 hello.c
+$ ./c4 test/hello.c
 hello, world
 exit(0) cycle = 9
 
-$ ./c4 -s hello.c       // 加上 -s 參數可以印出組合語言
+$ ./c4 -s test/hello.c       // 加上 -s 參數可以印出組合語言
 1: #include <stdio.h>
 2:
 3: int main()
@@ -32,7 +32,7 @@ $ ./c4 -s hello.c       // 加上 -s 參數可以印出組合語言
 7: }
     LEV
 
-$./c4 -d hello.c       // 加上 -d 參數可以印出執行過程
+$./c4 -d test/hello.c       // 加上 -d 參數可以印出執行過程
 1> ENT  0
 2> IMM  6946904
 3> PSH
@@ -48,10 +48,10 @@ exit(0) cycle = 9
 
 ## 範例: sum.c
 
-* https://github.com/cccbook/c4/blob/master/sum.c
+* [sum.c](../test/sum.c)
 
 ```
-$ ./c4 sum.c
+$ ./c4 test/sum.c
 sum(10)=55
 exit(0) cycle = 303
 $ ./c4 -s sum.c
@@ -131,13 +131,13 @@ $ ./c4 -s sum.c
 
 ## 範例: fib.c
 
-* https://github.com/cccbook/c4/blob/master/fib.c
+* [fib.c](../test/fib.c)
 
 ```
-$ ./c4 fib.c
+$ ./c4 test/fib.c
 f(7)=13
 exit(8) cycle = 920
-$ ./c4 -s fib.c
+$ ./c4 -s test/fib.c
 1: #include <stdio.h>
 2:
 3: int f(n) {
