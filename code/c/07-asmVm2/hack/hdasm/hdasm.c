@@ -9,7 +9,6 @@ char *jTable[] = {"","JGT","JEQ","JGE", "JLT", "JNE", "JLE", "JMP"};
 char *dTable[] = {"", "M", "D",  "MD",  "A",   "AM",  "AD",  "AMD"};
 
 void disasm(uint16_t *im, int16_t imTop) {
-  int16_t D = 0, A = 0, PC = 0;
   uint16_t I = 0;
   uint16_t a, c, d, j;
   char AM = ' ', op[10] = "";
