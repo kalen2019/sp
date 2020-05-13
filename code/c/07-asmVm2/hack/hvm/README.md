@@ -1,5 +1,11 @@
 # hvm -- Hack CPU VM based on hack2x86
 
+```
+PS D:\ccc\course\sp\code\c\07-asmVm2\hack\hvm> ./compile
+
+D:\ccc\course\sp\code\c\07-asmVm2\hack\hvm>gcc hack2x86.c -o hack2x86 
+```
+
 ## Add
 
 ```
