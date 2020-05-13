@@ -17,7 +17,7 @@ gcc -m32 -o c4 c4.c  (you may need the -m32 option on 64bit machines)
 
 C4 在 Windows / Linux / MAC 中都可以執行，在 windows 必須在有支援 open, read 這些 POSIX 檔案函式庫環境下才能編譯！
 
-您也可以閱讀 [更詳細的 C4 說明書](usage) 以進一步學習 C4。
+您也可以閱讀 [更詳細的 C4 說明書](./) 以進一步學習 C4。
 
 
 
