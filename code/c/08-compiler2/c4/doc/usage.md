@@ -3,7 +3,7 @@
 ## 用 gcc 編譯 C4
 
 ```
-$ gcc c4.c -o c4
+$ gcc -m32 c4.c -o c4
 ```
 
 ## 範例: hello.c
