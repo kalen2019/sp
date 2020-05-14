@@ -8,3 +8,4 @@
 
 可用 ps 先列出
 
+add by ssh fs:....
