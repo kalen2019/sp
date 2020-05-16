@@ -2,11 +2,10 @@
 
 C in four functions
 
-修改者 -- 陳鍾誠
-作者 -- https://github.com/rswier/
-來源 -- https://github.com/rswier/c4
-
-* [原理說明](doc)
+* 修改者 -- 陳鍾誠
+* 作者 -- https://github.com/rswier/
+* 來源 -- https://github.com/rswier/c4
+* 原理說明 -- [doc](doc)
 
 ## 使用方式
 

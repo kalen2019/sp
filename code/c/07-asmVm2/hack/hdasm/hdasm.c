@@ -4,12 +4,11 @@
 #include <stdint.h>
 
 int imTop = 0;
-int16_t im[32768];
+uint16_t im[32768];
 char *jTable[] = {"","JGT","JEQ","JGE", "JLT", "JNE", "JLE", "JMP"};
 char *dTable[] = {"", "M", "D",  "MD",  "A",   "AM",  "AD",  "AMD"};
 
-int disasm(uint16_t *im, int16_t imTop) {
-  int16_t D = 0, A = 0, PC = 0;
+void disasm(uint16_t *im, int16_t imTop) {
   uint16_t I = 0;
   uint16_t a, c, d, j;
   char AM = ' ', op[10] = "";
@@ -63,4 +62,5 @@ int main(int argc, char *argv[]) {
   imTop = fread(im, sizeof(uint16_t), 32768, binFile);
   fclose(binFile);
   disasm(im, imTop);
+  return 0;
 }
