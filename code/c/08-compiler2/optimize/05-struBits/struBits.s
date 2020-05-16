@@ -1,11 +1,11 @@
-	.file	"constant_folding.c"
+	.file	"struBits.c"
  # GNU C11 (tdm-1) version 5.1.0 (mingw32)
  #	compiled by GNU C version 5.1.0, GMP version 4.3.2, MPFR version 2.4.2, MPC version 0.8.2
  # GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
  # options passed: 
- # -iprefix C:/Program Files (x86)/CodeBlocks/MinGW/bin/../lib/gcc/mingw32/5.1.0/
- # -D_REENTRANT constant_folding.c -mtune=generic -march=pentiumpro
- # -auxbase-strip constant_folding_O0.s -O0 -fverbose-asm
+ # -iprefix D:/install/CodeBlocksPortable/App/CodeBlocks/MinGW/bin/../lib/gcc/mingw32/5.1.0/
+ # -D_REENTRANT struBits.c -mtune=generic -march=pentiumpro
+ # -auxbase-strip struBits.s -O0 -fverbose-asm
  # options enabled:  -faggressive-loop-optimizations
  # -fasynchronous-unwind-tables -fauto-inc-dec -fchkp-check-incomplete-type
  # -fchkp-check-read -fchkp-check-write -fchkp-instrument-calls
@@ -36,23 +36,41 @@
  # -mieee-fp -mlong-double-80 -mms-bitfields -mno-red-zone -mno-sse4
  # -mpush-args -msahf -mstack-arg-probe -mvzeroupper
 
-	.data
-	.align 4
-_a:
-	.long	3
+	.def	___main;	.scl	2;	.type	32;	.endef
+	.section .rdata,"dr"
+LC0:
+	.ascii "sizeof(iA)=%d\12\0"
+LC1:
+	.ascii "sizeof(Instr)=%d\12\0"
+LC2:
+	.ascii "sizeof(iC)=%d\12\0"
 	.text
-	.globl	_f
-	.def	_f;	.scl	2;	.type	32;	.endef
-_f:
+	.globl	_main
+	.def	_main;	.scl	2;	.type	32;	.endef
+_main:
 	pushl	%ebp	 #
 	movl	%esp, %ebp	 #,
-	movl	_a, %edx	 # a, D.1491
-	movl	%edx, %eax	 # D.1491, tmp92
-	sall	$2, %eax	 #, tmp92
-	addl	%edx, %eax	 # D.1491, D.1491
-	leal	8(%eax), %edx	 #, D.1491
-	movl	8(%ebp), %eax	 # n, tmp93
-	addl	%edx, %eax	 # D.1491, D.1491
-	popl	%ebp	 #
+	andl	$-16, %esp	 #,
+	subl	$32, %esp	 #,
+	call	___main	 #
+	movl	$3, 4(%esp)	 #,
+	movl	$LC0, (%esp)	 #,
+	call	_printf	 #
+	movl	$3, 4(%esp)	 #,
+	movl	$LC1, (%esp)	 #,
+	call	_printf	 #
+	movl	$3, 4(%esp)	 #,
+	movl	$LC2, (%esp)	 #,
+	call	_printf	 #
+	movzbl	26(%esp), %eax	 # iC.a, tmp91
+	orl	$8, %eax	 #, tmp92
+	movb	%al, 26(%esp)	 # tmp92, iC.a
+	movzbl	27(%esp), %eax	 # iC.c, tmp95
+	andl	$-64, %eax	 #, tmp96
+	orl	$3, %eax	 #, tmp97
+	movb	%al, 27(%esp)	 # tmp97, iC.c
+	movl	$0, %eax	 #, D.1968
+	leave
 	ret
 	.ident	"GCC: (tdm-1) 5.1.0"
+	.def	_printf;	.scl	2;	.type	32;	.endef
