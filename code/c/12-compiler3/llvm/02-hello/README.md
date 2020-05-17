@@ -4,8 +4,38 @@
 
 ## 使用
 
+```
+guest@localhost:~/sp/code/c/12-compiler3/llvm/02-hello$ clang-10 hello.c -o hello
+guest@localhost:~/sp/code/c/12-compiler3/llvm/02-hello$ ./hello
+hello!
+```
 
 
+## 抽象語法樹
+
+```
+guest@localhost:~/sp/code/c/12-compiler3/llvm/02-hello$ clang-10 -c -Xclang -ast-dump hello.c > hello.ast
+guest@localhost:~/sp/code/c/12-compiler3/llvm/02-hello$ cat hello.ast | more
+TranslationUnitDecl 0x1f9b868 <<invalid sloc>> <invalid sloc>
+|-TypedefDecl 0x1f9c100 <<invalid sloc>> <invalid sloc> implicit
+ __int128_t '__int128'
+| `-BuiltinType 0x1f9be00 '__int128'
+|-TypedefDecl 0x1f9c170 <<invalid sloc>> <invalid sloc> implicit
+ __uint128_t 'unsigned __int128'
+| `-BuiltinType 0x1f9be20 'unsigned __int128'
+|-TypedefDecl 0x1f9c478 <<invalid sloc>> <invalid sloc> implicit
+ __NSConstantString 'struct __NSConstantString_tag'
+| `-RecordType 0x1f9c250 'struct __NSConstantString_tag'
+|   `-Record 0x1f9c1c8 '__NSConstantString_tag'
+|-TypedefDecl 0x1f9c510 <<invalid sloc>> <invalid sloc> implicit
+ __builtin_ms_va_list 'char *'
+| `-PointerType 0x1f9c4d0 'char *'
+|   `-BuiltinType 0x1f9b900 'char'
+|-TypedefDecl 0x1f9c808 <<invalid sloc>> <invalid sloc> implicit refere
+nced __builtin_va_list 'struct __va_list_tag [1]'
+| `-ConstantArrayType 0x1f9c7b0 'struct __va_list_tag [1]' 1
+
+```
 
 ## 包含套件
 
