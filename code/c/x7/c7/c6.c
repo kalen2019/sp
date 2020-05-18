@@ -17,7 +17,7 @@ int *code, *stack,  // code:程式段, stack:堆疊段
     *rel, *relp,    // rel: 重定位紀錄
     output;         // output: 輸出目的檔 
 char *st, *stp,     // st:字串表, stp:字串表指標
-     *source, *ops, // source:c 語言原始碼, ops:運算列表。
+     *source, // source:c 語言原始碼,
      *data, *datap; // datap/bss pointer (資料段機器碼指標)
 char *cFile, *oFile;
 char *obj;          // 目的碼
@@ -31,7 +31,7 @@ enum { // token : 0-127 直接用該字母表達， 128 以後用代號。
   Char, Else, Enum, If, Int, Return, Sizeof, While,
   Assign, Cond, Lor, Lan, Or, Xor, And, Eq, Ne, Lt, Gt, Le, Ge, Shl, Shr, Add, Sub, Mul, Div, Mod, Inc, Dec, Brak
 };
-
+char *symClassNames; // "Fun , Sys , Glo ,"
 // types (支援型態，只有 int, char, pointer)
 enum { CHAR, INT, PTR };
 
@@ -43,6 +43,7 @@ enum { Tk, Hash, Name, Class, Type, Val, HClass, HType, HVal, Idsz }; // HClass,
 enum { LEA ,IMM ,JMP ,JSR ,BZ  ,BNZ ,ENT ,ADJ ,LEV ,LI  ,LC  ,SI  ,SC  ,PSH ,
        OR  ,XOR ,AND ,EQ  ,NE  ,LT  ,GT  ,LE  ,GE  ,SHL ,SHR ,ADD ,SUB ,MUL ,DIV ,MOD ,
        OPEN,READ,WRIT,CLOS,PRTF,MALC,FREE,MSET,MCMP,MCPY,EXIT };
+char *ops; // 代表以上運算列表的字串 "LEA  IMM  ...."。 (最多四個字)
 
 char *p, *lp; // current position in source code (p: 目前原始碼指標, lp: 上一行原始碼指標)
 int *pc, // code: 程式段, pc: 程式計數器
@@ -487,10 +488,6 @@ int cc_main(char *file) {
   int fd, *idmain, i;
   if ((fd = open(file, O_READ, 0)) < 0) { printf("could not open(%s)\n", file); return -1; }
 
-  ops = "LEA ,IMM ,JMP ,JSR ,BZ  ,BNZ ,ENT ,ADJ ,LEV ,LI  ,LC  ,SI  ,SC  ,PSH ,"\
-        "OR  ,XOR ,AND ,EQ  ,NE  ,LT  ,GT  ,LE  ,GE  ,SHL ,SHR ,ADD ,SUB ,MUL ,DIV ,MOD ,"\
-        "OPEN,READ,WRIT,CLOS,PRTF,MALC,FREE,MSET,MCMP,MCPY,EXIT,";
-
   p = "char else enum if int return sizeof while "
       "open read write close printf malloc free memset memcmp memcpy exit void main";
 
@@ -587,7 +584,7 @@ int vm_main(int *pc, int argc, char **argv) {
 enum { Entry, C0, CSize, COff, D0, DSize, DOff, T0, TSize, TOff, S0, SSize, SOff, R0, RSize, ROff, HFields };
 enum { SName, SClass, SFields };
 enum { W=4 }; // Word: W = sizeof(int)
-char *obj, *data0;
+char *data0;
 int *h, *code0, objLen, ofd;
 
 int sym_to_obj(char *o) {
@@ -676,19 +673,24 @@ int obj_load() { // 載入目的檔
   return 0;
 }
 
-int obj_dump() { // 傾印目的檔
+int obj_dump_sym() {
   int len, *id; char *name;
-  printf("---------obj_dump()-------------\n");
-  obj_dump_header();
-
-  printf("\nsym:\n");
+  printf("\nSymbol Table:\n");
+  printf("    Name    Type\n");
   len = h[SSize]/W;
   id = sym;
   while (id - sym < len) {
     name = (char*) (st+id[SName]);
-    printf("%s %d\n", name, id[SClass]);
+    printf("%8s     %.4s\n", name, &symClassNames[(id[SClass]-Fun)*5]); // "Fun , Sys , Glo ,"
     id = id + SSize;
   }
+  return 0;
+}
+
+int obj_dump() { // 傾印目的檔
+  printf("---------obj_dump()-------------\n");
+  obj_dump_header();
+  obj_dump_sym();
   return 0;
 }
 
@@ -698,7 +700,10 @@ int main(int argc, char **argv) { // 主程式
   memset(obj,  0, poolsz);
   if (!(stack = malloc(poolsz))) { printf("could not malloc(%d) stack area\n", poolsz); return -1; }  // 堆疊段
   memset(stack,0, poolsz);
-
+  ops = "LEA ,IMM ,JMP ,JSR ,BZ  ,BNZ ,ENT ,ADJ ,LEV ,LI  ,LC  ,SI  ,SC  ,PSH ,"\
+        "OR  ,XOR ,AND ,EQ  ,NE  ,LT  ,GT  ,LE  ,GE  ,SHL ,SHR ,ADD ,SUB ,MUL ,DIV ,MOD ,"\
+        "OPEN,READ,WRIT,CLOS,PRTF,MALC,FREE,MSET,MCMP,MCPY,EXIT,";
+  symClassNames = "Fun ,Sys ,Glo ,";
 #ifdef __CC__
   --argc; ++argv;
   if (argc > 0 && **argv == '-' && (*argv)[1] == 's') { src = 1; --argc; ++argv; }

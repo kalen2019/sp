@@ -14,3 +14,6 @@ objdump: c6.c
 
 clean:
 	$(RM) $(TARGET)
+
+wclean:
+	del *.exe
