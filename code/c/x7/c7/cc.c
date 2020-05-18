@@ -10,7 +10,7 @@
 #include <memory.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include "c6.h"
+#include "cc.h"
 
 // ----------- ccc add ----------------
 int *code, *stack,  // code:程式段, stack:堆疊段

@@ -1,10 +1,12 @@
-# c6 -- 將 C 語言編譯為堆疊機 vm 的目的檔格式
+# c7 -- 將 C 語言編譯為堆疊機 vm 的目的檔格式
 
-c6 是一個可自我編譯的極簡版 C 語言編譯器，由陳鍾誠修改自 c4 專案。
+c7 是一個可自我編譯的極簡版 C 語言編譯器，由陳鍾誠修改自 c4 專案。
 
 c4 專案的來源為 -- https://github.com/rswier/c4 。
 
 陳鍾誠修改之處:
+
+改成四個檔案 cc.c, cc.h, objdump.c, vm.c
 
 1. 加上中文註解
 2. 讓函數更模組化，例如增加虛擬機函數 vm_run(), 不受現在只有 4 個函數。
@@ -16,37 +18,37 @@ c4 專案的來源為 -- https://github.com/rswier/c4 。
 ## 建置執行
 
 ```
-PS D:\ccc\course\sp\code\c\08-compiler2\c6> make       
-gcc -D__CC__ -Wall -std=gnu99 -o cc c6.c
-gcc -D__VM__ -Wall -std=gnu99 -o vm c6.c
-gcc -D__OBJDUMP__ -Wall -std=gnu99 -o objdump c6.c
-
-PS D:\ccc\course\sp\code\c\08-compiler2\c6> ./cc -o test/fib.o test/fib.c
+PS D:\ccc\course\sp\code\c\x7\c7> make
+gcc -D__CC__ -Wall -std=gnu99 -o cc cc.c 
+gcc -D__OBJDUMP__ -Wall -std=gnu99 -o objdump cc.c 
+PS D:\ccc\course\sp\code\c\x7\c7> ./cc cc.c test/sum.c
+exit(11) cycle = 302
+exit(0) cycle = 105682
+PS D:\ccc\course\sp\code\c\x7\c7> ./cc -o test/sum.o test/sum.c
 ---------obj_save()-------------
-header: entry=54
+header: entry=56
 
           Size      VMA      LMA   Offset
-code: 0000011C 00C50050 00C50050 00000040
-data: 0000000C 00C90058 00C90058 0000015C
-relo: 00000020 00D10068 00D10068 00000168
-stab: 000000B8 00CD0060 00CD0060 00000188
-symt: 00000010 00C10048 00C10048 00000240
-
-PS D:\ccc\course\sp\code\c\08-compiler2\c6> ./vm test/fib.o
-f(7)=13
-exit(8) cycle = 920
-
-PS D:\ccc\course\sp\code\c\08-compiler2\c6> ./objdump test/fib.o
+code: 00000124 00C10050 00C10050 00000040
+data: 0000000C 00C50058 00C50058 00000164
+relo: 00000010 00CD0068 00CD0068 00000170
+stab: 000000C4 00C90060 00C90060 00000180
+symt: 00000010 00BD0048 00BD0048 00000244
+PS D:\ccc\course\sp\code\c\x7\c7> ./vm test/sum.o
+sum(10)=55
+exit(11) cycle = 302
+PS D:\ccc\course\sp\code\c\x7\c7> ./objdump test/sum.o
 ---------obj_dump()-------------
-header: entry=54
+header: entry=56
 
           Size      VMA      LMA   Offset
-code: 0000011C 00C50050 00620088 00000040
-data: 0000000C 00C90058 006201A4 0000015C
-relo: 00000020 00D10068 006201B0 00000168
-stab: 000000B8 00CD0060 006201D0 00000188
-symt: 00000010 00C10048 00620288 00000240
+code: 00000124 00C10050 006F0088 00000040
+data: 0000000C 00C50058 006F01AC 00000164
+relo: 00000010 00CD0068 006F01B8 00000170
+stab: 000000C4 00C90060 006F01C8 00000180
+symt: 00000010 00BD0048 006F028C 00000244
 
-sym:
-main 129
+Symbol Table:
+    Name    Type
+    main     Fun
 ```
