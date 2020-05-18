@@ -97,3 +97,5 @@ mkfs
 *.pdb
 target
 
+# c -- conon
+bin
