@@ -56,4 +56,5 @@ default settings
 * [Advanced Programming in the UNIX® Environment, Third Edition](http://www.apuebook.com/toc3e.html)
 * [Systems Programming under Linux](https://github.com/DevNaga/linux-systems-programming-with-c)
     * 程式 -- https://github.com/DevNaga/gists/
-
+* 21 世紀的 C 語言
+    * https://github.com/b-k/21st-Century-Examples
