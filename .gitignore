@@ -92,3 +92,8 @@ kernel
 kernelmemfs
 mkfs
 .gdbinit
+
+# rust
+*.pdb
+target
+
