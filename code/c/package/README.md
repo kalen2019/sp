@@ -1,8 +1,16 @@
-# package
+# 套件管理員 -- Package Manager
+
+* https://chocolatey.org/packages
+* https://conan.io/center/
+
+
+
+
+
+
+## conan 
 
 * [C++ Package Management With Conan: Introduction](https://medium.com/@ilyas.hamadouche/c-package-management-with-conan-introduction-8c7bd928c009)
-
-## conan 安裝
 
 ```
 PS D:\ccc\course\sp\code\c\x7\c7> pip3 install conan

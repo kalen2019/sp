@@ -1,0 +1,3 @@
+D:/ccc/course/sp/code/c/package/01-sqlitewin/buildwin/CMakeFiles/edit_cache.dir
+D:/ccc/course/sp/code/c/package/01-sqlitewin/buildwin/CMakeFiles/testConan.dir
+D:/ccc/course/sp/code/c/package/01-sqlitewin/buildwin/CMakeFiles/rebuild_cache.dir

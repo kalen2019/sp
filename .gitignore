@@ -99,3 +99,6 @@ target
 
 # c -- conon
 bin
+
+*.gz
+*.tar
