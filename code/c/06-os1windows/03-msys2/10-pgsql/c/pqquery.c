@@ -1,16 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <libpq-fe.h>
-
-void do_exit(PGconn *conn) {
-    
-    PQfinish(conn);
-    exit(1);
-}
+#include "setting.h"
 
 int main() {
     
-    PGconn *conn = PQconnectdb("user=janbodnar dbname=testdb");
+    PGconn *conn = PQconnectdb(connectStr);
 
     if (PQstatus(conn) == CONNECTION_BAD) {
         

@@ -1,12 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <libpq-fe.h>
-
-void do_exit(PGconn *conn) {
-    
-    PQfinish(conn);
-    exit(1);
-}
+#include "setting.h"
 
 int main(int argc, char *argv[]) {
     
@@ -36,7 +31,7 @@ int main(int argc, char *argv[]) {
     snprintf(str, LEN, "%d", rowId);  
     paramValues[0] = str;  
     
-    PGconn *conn = PQconnectdb("user=user dbname=testdb");
+    PGconn *conn = PQconnectdb(connectStr);
 
     if (PQstatus(conn) == CONNECTION_BAD) {
         

@@ -8,7 +8,8 @@
 !README
 !LICENSE
 
-
+# postgresql
+pgdata/
 
 .vscode
 

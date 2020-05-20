@@ -6,8 +6,13 @@
 $ pacman -S mingw-w64-x86_64-postgresql
 ...
 
-$ initdb -D /home/user/pgdata
-The files belonging to this database system will be owned by user "user".
+
+## 創建資料庫
+
+```
+Tim@DESKTOP-QOC5V2F MINGW64 /d/ccc/sp/code/c/06-os1windows/03-msys2/10-pgsql
+$ initdb -D ./pgdata
+The files belonging to this database system will be owned by user "Tim".
 This user must also own the server process.
 
 The database cluster will be initialized with locale "Chinese (Traditional)_Taiw
@@ -20,25 +25,30 @@ The default text search configuration will be set to "simple".
 
 Data page checksums are disabled.
 
-fixing permissions on existing directory C:/msys64/home/user/pgdata ... ok
+creating directory ./pgdata ... ok
 creating subdirectories ... ok
+selecting dynamic shared memory implementation ... windows
 selecting default max_connections ... 100
 selecting default shared_buffers ... 128MB
-selecting dynamic shared memory implementation ... windows
+selecting default time zone ... Asia/Taipei
 creating configuration files ... ok
 running bootstrap script ... ok
 performing post-bootstrap initialization ... ok
 syncing data to disk ... ok
 
-WARNING: enabling "trust" authentication for local connections
+initdb: warning: enabling "trust" authentication for local connections
 You can change this by editing pg_hba.conf or using the option -A, or
 --auth-local and --auth-host, the next time you run initdb.
 
 Success. You can now start the database server using:
 
-    C:/msys64/mingw64/bin/pg_ctl -D C:/msys64/home/user/pgdata -l logfile start
-$ pg_ctl -D /home/user/pgdata -l logfile start
+    C:/msys64/mingw64/bin/pg_ctl -D ./pgdata -l logfile start
+
+
+Tim@DESKTOP-QOC5V2F MINGW64 /d/ccc/sp/code/c/06-os1windows/03-msys2/10-pgsql
+$ pg_ctl -D ./pgdata -l logfile start
 waiting for server to start.... done
 server started
+
 ```
 
