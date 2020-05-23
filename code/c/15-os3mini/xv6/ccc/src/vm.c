@@ -1,3 +1,4 @@
+// 虛擬記憶體 Virtual Memory
 #include "param.h"
 #include "types.h"
 #include "defs.h"
@@ -57,6 +58,18 @@ walkpgdir(pde_t *pgdir, const void *va, int alloc)
 // Create PTEs for virtual addresses starting at va that refer to
 // physical addresses starting at pa. va and size might not
 // be page-aligned.
+/*
+mappages 做的工作是在页表中建立一段虚拟内存到一段物理内存的映射。
+它是在页的级别，即一页一页地建立映射的。对于每一个待映射虚拟地址，
+mappages 调用 walkpgdir 来找到该地址对应的 PTE 地址。
+然后初始化该 PTE 以保存对应物理页号、许可级别（PTE_W 和/或 PTE_U）
+以及 PTE_P 位来标记该 PTE 是否是有效的。
+
+walkpgdir 模仿 x86 的分页硬件为一个虚拟地址寻找 PTE 的过程（见图表2-1）。
+walkpgdir 通过虚拟地址的前 10 位来找到在页目录中的对应条目，如果该条目不存在，
+说明要找的页表页尚未分配；如果 alloc 参数被设置了，walkpgdir 会分配页表页并将其物理地址放到页目录中。
+最后用虚拟地址的接下来 10 位来找到其在页表中的 PTE 地址。
+*/
 static int
 mappages(pde_t *pgdir, void *va, uint size, uint pa, int perm)
 {
@@ -137,6 +150,13 @@ setupkvm(void)
 
 // Allocate one page table for the machine for the kernel address
 // space for scheduler processes.
+/*
+main 调用 kvmalloc（1757），创建并切换到一个拥有内核运行所需的 KERNBASE 以上映射的页表。
+这里的大多数工作都是由 setupkvm（1737）完成的。首先，它会分配一页内存来放置页目录，
+然后调用 mappages 来建立内核需要的映射，这些映射可以在 kmap（1728）数组中找到。
+这里的映射包括内核的指令和数据，PHYSTOP 以下的物理内存，以及 I/O 设备所占的内存。
+setupkvm 不会建立任何用户内存的映射，这些映射稍后会建立。
+*/
 void
 kvmalloc(void)
 {
@@ -153,6 +173,12 @@ switchkvm(void)
 }
 
 // Switch TSS and h/w page table to correspond to process p.
+/*
+当特权级从用户模式向内核模式转换时，内核不能使用用户的栈，因为它可能不是有效的。
+用户进程可能是恶意的或者包含了一些错误，使得用户的 %esp 指向一个不是用户内存的地方。
+xv6 会使得在内陷发生的时候进行一个栈切换，栈切换的方法是让硬件从一个任务段描述符中
+读出新的栈选择符和一个新的 %esp 的值。函数 switchuvm（1773）把用户进程的内核栈顶地址存入任务段描述符中。
+*/
 void
 switchuvm(struct proc *p)
 {

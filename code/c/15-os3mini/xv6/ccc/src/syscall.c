@@ -128,6 +128,17 @@ static int (*syscalls[])(void) = {
 [SYS_close]   sys_close,
 };
 
+/*
+对于系统调用，trap 调用 syscall（3375）。syscall 从中断帧中读出系统调用号，
+中断帧也包括被保存的 %eax，以及到系统调用函数表的索引。对第一个系统调用而言，
+%eax 保存的是 SYS_exec（3207），并且 syscall 会调用第 SYS_exec 个系统调用
+函数表的表项，相应地也就调用了 sys_exec。
+
+syscall 在 %eax 保存系统调用函数的返回值。当 trap 返回用户空间时，它会从
+ cp->tf 中加载其值到寄存器中。因此，当 exec 返回时，它会返回系统调用处理函数
+ 返回的返回值（3381）。系统调用按照惯例会在发生错误的时候返回一个小于 0 的数，
+ 成功执行时返回正数。如果系统调用号是非法的，syscall 会打印错误并且返回 -1。
+*/
 void
 syscall(void)
 {

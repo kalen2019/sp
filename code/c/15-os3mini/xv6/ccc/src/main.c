@@ -18,7 +18,7 @@ int
 main(void)
 {
   kinit1(end, P2V(4*1024*1024)); // phys page allocator // 實體分頁配置器
-  kvmalloc();      // kernel page table                 // 核心的分頁表
+  kvmalloc();      // kernel page table                 // 核心的分頁表 // entry 中建立的页表已经产生了足够多的映射来让内核的 C 代码正常运行，但内核建立的页表更加精巧地映射了内存空间
   mpinit();        // detect other processors           // 偵測是否有其他處理器
   lapicinit();     // interrupt controller              // 中斷控制器
   seginit();       // segment descriptors               // 段描述器
