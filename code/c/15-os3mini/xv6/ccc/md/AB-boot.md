@@ -13,6 +13,100 @@
 
 引导加载器的第一条指令 `cli`（8412）屏蔽处理器中断。硬件可以通过中断触发中断处理程序，从而调用操作系统的功能。BIOS 作为一个小型操作系统，为了初始化硬件设备，可能设置了自己的中断处理程序。但是现在 BIOS 已经没有了控制权，而是引导加载器正在运行，所以现在还允许中断不合理也不安全。当 xv6 准备好了后（详见第3章），它会重新允许中断。
 
+> [bootasm.S]
+
+```s
+#include "asm.h"
+#include "memlayout.h"
+#include "mmu.h"
+
+# Start the first CPU: switch to 32-bit protected mode, jump into C.
+# The BIOS loads this code from the first sector of the hard disk into
+# memory at physical address 0x7c00 and starts executing in real mode
+# with %cs=0 %ip=7c00.
+
+.code16                       # Assemble for 16-bit mode
+.globl start
+start:
+  cli                         # BIOS enabled interrupts; disable
+
+  # Zero data segment registers DS, ES, and SS.
+  xorw    %ax,%ax             # Set %ax to zero
+  movw    %ax,%ds             # -> Data Segment
+  movw    %ax,%es             # -> Extra Segment
+  movw    %ax,%ss             # -> Stack Segment
+
+  # Physical address line A20 is tied to zero so that the first PCs 
+  # with 2 MB would run software that assumed 1 MB.  Undo that.
+seta20.1:
+  inb     $0x64,%al               # Wait for not busy
+  testb   $0x2,%al
+  jnz     seta20.1
+
+  movb    $0xd1,%al               # 0xd1 -> port 0x64
+  outb    %al,$0x64
+
+seta20.2:
+  inb     $0x64,%al               # Wait for not busy
+  testb   $0x2,%al
+  jnz     seta20.2
+
+  movb    $0xdf,%al               # 0xdf -> port 0x60
+  outb    %al,$0x60
+
+  # Switch from real to protected mode.  Use a bootstrap GDT that makes
+  # virtual addresses map directly to physical addresses so that the
+  # effective memory map doesn't change during the transition.
+  lgdt    gdtdesc
+  movl    %cr0, %eax
+  orl     $CR0_PE, %eax
+  movl    %eax, %cr0
+
+//PAGEBREAK!
+  # Complete the transition to 32-bit protected mode by using a long jmp
+  # to reload %cs and %eip.  The segment descriptors are set up with no
+  # translation, so that the mapping is still the identity mapping.
+  ljmp    $(SEG_KCODE<<3), $start32
+
+.code32  # Tell assembler to generate 32-bit code now.
+start32:
+  # Set up the protected-mode data segment registers
+  movw    $(SEG_KDATA<<3), %ax    # Our data segment selector
+  movw    %ax, %ds                # -> DS: Data Segment
+  movw    %ax, %es                # -> ES: Extra Segment
+  movw    %ax, %ss                # -> SS: Stack Segment
+  movw    $0, %ax                 # Zero segments not ready for use
+  movw    %ax, %fs                # -> FS
+  movw    %ax, %gs                # -> GS
+
+  # Set up the stack pointer and call into C.
+  movl    $start, %esp
+  call    bootmain
+
+  # If bootmain returns (it shouldn't), trigger a Bochs
+  # breakpoint if running under Bochs, then loop.
+  movw    $0x8a00, %ax            # 0x8a00 -> port 0x8a00
+  movw    %ax, %dx
+  outw    %ax, %dx
+  movw    $0x8ae0, %ax            # 0x8ae0 -> port 0x8a00
+  outw    %ax, %dx
+spin:
+  jmp     spin
+
+# Bootstrap GDT
+.p2align 2                                # force 4 byte alignment
+gdt:
+  SEG_NULLASM                             # null seg
+  SEG_ASM(STA_X|STA_R, 0x0, 0xffffffff)   # code seg
+  SEG_ASM(STA_W, 0x0, 0xffffffff)         # data seg
+
+gdtdesc:
+  .word   (gdtdesc - gdt - 1)             # sizeof(gdt) - 1
+  .long   gdt                             # address gdt
+
+
+```
+
 现在处理器处在模拟 Intel 8088 的*实模式*下，有8个16位通用寄存器可用，但实际上处理器发送给内存的是20位的地址。这时，多出来的4位其实是由段寄存器`%cs, %ds, %es, %ss`提供的。当程序用到一个内存地址时，处理器会自动在该地址上加上某个16位段寄存器值的16倍。因此，内存引用中其实隐含地使用了段寄存器的值：取指会用到 `%cs`，读写数据会用到 `%ds`，读写栈会用到 `%ss`。
 
 ![figureB-1](../pic/fb-1.png)
@@ -121,7 +215,7 @@ start32:
 
 引导加载器的 C 语言部分 [bootmain.c]（8500）目的是在磁盘的第二个扇区开头找到内核程序。如我们在第2章所见，内核是 ELF 格式的二进制文件。为了读取 ELF 头，`bootmain` 载入 ELF 文件的前4096字节（8514），并将其拷贝到内存中 0x10000 处。
 
-> 參考程式: [bootmain.c]
+> [bootmain.c]
 
 ```c
 void
@@ -161,7 +255,7 @@ bootmain(void)
 下一步要通过 ELF 头检查这是否的确是一个 ELF 文件。`bootmain` 从磁盘中 ELF 头之后 `off` 字节处读取扇区的内容，并写到内存中地址 `paddr` 处。`bootmain` 调用 `readseg` 将数据从磁盘中载入（8538），并调用 `stosb` 将段的剩余部分置零（8540）。`stosb`（0492）使用 x86 指令 `rep stosb` 来初始化内存块中的每个字节。
 
 
-> 參考程式: [kernel.ld](../src/kernel.ld)
+> [kernel.ld](../src/kernel.ld)
 
 ```ld
 OUTPUT_FORMAT("elf32-i386", "elf32-i386", "elf32-i386")
@@ -196,7 +290,7 @@ start address 0x0010000c
 按照惯例，在 [entry.S]（1036）中定义的 `_start` 符号即 ELF 入口。由于 xv6 还没有建立虚拟内存，xv6 的入口即 `entry`（1040）的物理地址。
 
 
-> 參考程式: [entry.S]
+> [entry.S]
 
 ```asm
 multiboot_header:
