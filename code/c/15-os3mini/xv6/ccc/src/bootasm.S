@@ -12,16 +12,16 @@
 start:
   cli                         # BIOS enabled interrupts; disable
 
-  # Zero data segment registers DS, ES, and SS.
+  # Zero data segment registers DS, ES, and SS. // 清零
   xorw    %ax,%ax             # Set %ax to zero
   movw    %ax,%ds             # -> Data Segment
   movw    %ax,%es             # -> Extra Segment
   movw    %ax,%ss             # -> Stack Segment
 
-  # Physical address line A20 is tied to zero so that the first PCs 
+  # Physical address line A20 is tied to zero so that the first PCs // 解除記憶體 1MB 限制
   # with 2 MB would run software that assumed 1 MB.  Undo that.
 seta20.1:
-  inb     $0x64,%al               # Wait for not busy
+  inb     $0x64,%al               # Wait for not busy 
   testb   $0x2,%al
   jnz     seta20.1
 
@@ -36,8 +36,8 @@ seta20.2:
   movb    $0xdf,%al               # 0xdf -> port 0x60
   outb    %al,$0x60
 
-  # Switch from real to protected mode.  Use a bootstrap GDT that makes
-  # virtual addresses map directly to physical addresses so that the
+  # Switch from real to protected mode.  Use a bootstrap GDT that makes // 從實體模式開始，企圖進入保護模式
+  # virtual addresses map directly to physical addresses so that the // 設定 GDT 將虛擬記憶體直接映射為實體記憶體
   # effective memory map doesn't change during the transition.
   lgdt    gdtdesc
   movl    %cr0, %eax
@@ -45,12 +45,12 @@ seta20.2:
   movl    %eax, %cr0
 
 //PAGEBREAK!
-  # Complete the transition to 32-bit protected mode by using a long jmp
+  # Complete the transition to 32-bit protected mode by using a long jmp // 跳轉進入 32-bit 保護模式
   # to reload %cs and %eip.  The segment descriptors are set up with no
   # translation, so that the mapping is still the identity mapping.
   ljmp    $(SEG_KCODE<<3), $start32
 
-.code32  # Tell assembler to generate 32-bit code now.
+.code32  # Tell assembler to generate 32-bit code now. // 以下為 32-bit 的組合語言 (以上為 16-bit)
 start32:
   # Set up the protected-mode data segment registers
   movw    $(SEG_KDATA<<3), %ax    # Our data segment selector
