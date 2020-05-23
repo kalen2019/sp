@@ -1,9 +1,9 @@
-// Boot loader.
+// Boot loader. 啟動載入器
 //
-// Part of the boot block, along with bootasm.S, which calls bootmain().
-// bootasm.S has put the processor into protected 32-bit mode.
-// bootmain() loads an ELF kernel image from the disk starting at
-// sector 1 and then jumps to the kernel entry routine.
+// Part of the boot block, along with bootasm.S, which calls bootmain(). // bootasm.S 會呼叫 bootmain()
+// bootasm.S has put the processor into protected 32-bit mode.           // bootasm.S 已進入 32-bit 模式
+// bootmain() loads an ELF kernel image from the disk starting at        // bootmain() 會載入 kernel 的 ELF
+// sector 1 and then jumps to the kernel entry routine.                  // 然後開始執行 kernel
 
 #include "types.h"
 #include "elf.h"
@@ -15,29 +15,29 @@
 void readseg(uchar*, uint, uint);
 
 void
-bootmain(void)
+bootmain(void)                                     // C 語言的 bootmain() 啟動程式
 {
   struct elfhdr *elf;
   struct proghdr *ph, *eph;
   void (*entry)(void);
   uchar* pa;
-
-  elf = (struct elfhdr*)0x10000;  // scratch space
+  // 引导加载器的 C 语言部分 bootmain.c（8500）目的是在磁盘的第二个扇区开头找到内核程序。如我们在第2章所见，内核是 ELF 格式的二进制文件。为了读取 ELF 头，bootmain 载入 ELF 文件的前4096字节（8514），并将其拷贝到内存中 0x10000 处。
+  elf = (struct elfhdr*)0x10000;  // scratch spacex
 
   // Read 1st page off disk
-  readseg((uchar*)elf, 4096, 0);
+  readseg((uchar*)elf, 4096, 0); // 讀取 elf 的前 4K 表頭
 
-  // Is this an ELF executable?
+  // Is this an ELF executable? // 若不是可執行的 ELF 檔，直接失敗返回！
   if(elf->magic != ELF_MAGIC)
     return;  // let bootasm.S handle error
 
-  // Load each program segment (ignores ph flags).
+  // Load each program segment (ignores ph flags). // 載入所有程式段，
   ph = (struct proghdr*)((uchar*)elf + elf->phoff);
   eph = ph + elf->phnum;
   for(; ph < eph; ph++){
     pa = (uchar*)ph->paddr;
     readseg(pa, ph->filesz, ph->off);
-    if(ph->memsz > ph->filesz)
+    if(ph->memsz > ph->filesz) // 尚未
       stosb(pa + ph->filesz, 0, ph->memsz - ph->filesz);
   }
 

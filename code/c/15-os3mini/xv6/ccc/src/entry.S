@@ -23,7 +23,7 @@
 #include "mmu.h"
 #include "param.h"
 
-# Multiboot header.  Data to direct multiboot loader.
+# Multiboot header.  Data to direct multiboot loader. // 多重開機表頭
 .p2align 2
 .text
 .globl multiboot_header
@@ -34,31 +34,31 @@ multiboot_header:
   .long flags
   .long (-magic-flags)
 
-# By convention, the _start symbol specifies the ELF entry point.
-# Since we haven't set up virtual memory yet, our entry point is
-# the physical address of 'entry'.
+# By convention, the _start symbol specifies the ELF entry point.  // _start 指定 ELF 的入口點
+# Since we haven't set up virtual memory yet, our entry point is   // 由於目前還沒有設好虛擬記憶體
+# the physical address of 'entry'.                                 // 所以指定的是實體記憶體位址
 .globl _start
 _start = V2P_WO(entry)
 
-# Entering xv6 on boot processor, with paging off.
+# Entering xv6 on boot processor, with paging off. // 啟動分頁機制，進入 xv6
 .globl entry
 entry:
-  # Turn on page size extension for 4Mbyte pages
+  # Turn on page size extension for 4Mbyte pages // 開啟 4MB 大小的分頁
   movl    %cr4, %eax
   orl     $(CR4_PSE), %eax
   movl    %eax, %cr4
-  # Set page directory
+  # Set page directory                           // 設定分頁目錄
   movl    $(V2P_WO(entrypgdir)), %eax
   movl    %eax, %cr3
-  # Turn on paging.
+  # Turn on paging.                              // 啟動分頁機制
   movl    %cr0, %eax
   orl     $(CR0_PG|CR0_WP), %eax
   movl    %eax, %cr0
 
-  # Set up the stack pointer.
+  # Set up the stack pointer.                    // 設定 kernel 的堆疊
   movl $(stack + KSTACKSIZE), %esp
 
-  # Jump to main(), and switch to executing at
+  # Jump to main(), and switch to executing at            // 進入 main()
   # high addresses. The indirect call is needed because
   # the assembler produces a PC-relative instruction
   # for a direct jump.
