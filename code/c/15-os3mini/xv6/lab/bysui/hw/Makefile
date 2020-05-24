@@ -15,13 +15,13 @@ OBJS = \
 	picirq.o\
 	pipe.o\
 	proc.o\
-	sleeplock.o\
 	spinlock.o\
 	string.o\
 	swtch.o\
 	syscall.o\
 	sysfile.o\
 	sysproc.o\
+	timer.o\
 	trapasm.o\
 	trap.o\
 	uart.o\
@@ -59,8 +59,6 @@ QEMU = $(shell if which qemu > /dev/null; \
 	then echo qemu; exit; \
 	elif which qemu-system-i386 > /dev/null; \
 	then echo qemu-system-i386; exit; \
-	elif which qemu-system-x86_64 > /dev/null; \
-	then echo qemu-system-x86_64; exit; \
 	else \
 	qemu=/Applications/Q.app/Contents/MacOS/i386-softmmu.app/Contents/MacOS/i386-softmmu; \
 	if test -x $$qemu; then echo $$qemu; exit; fi; fi; \
@@ -76,31 +74,24 @@ AS = $(TOOLPREFIX)gas
 LD = $(TOOLPREFIX)ld
 OBJCOPY = $(TOOLPREFIX)objcopy
 OBJDUMP = $(TOOLPREFIX)objdump
-CFLAGS = -fno-pic -static -fno-builtin -fno-strict-aliasing -O2 -Wall -MD -ggdb -m32 -Werror -fno-omit-frame-pointer
+#CFLAGS = -fno-pic -static -fno-builtin -fno-strict-aliasing -O2 -Wall -MD -ggdb -m32 -Werror -fno-omit-frame-pointer
+CFLAGS = -fno-pic -static -fno-builtin -fno-strict-aliasing -fvar-tracking -fvar-tracking-assignments -O0 -g -Wall -MD -gdwarf-2 -m32 -Werror -fno-omit-frame-pointer
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 ASFLAGS = -m32 -gdwarf-2 -Wa,-divide
 # FreeBSD ld wants ``elf_i386_fbsd''
-LDFLAGS += -m $(shell $(LD) -V | grep elf_i386 2>/dev/null | head -n 1)
+LDFLAGS += -m $(shell $(LD) -V | grep elf_i386 2>/dev/null)
 
-# Disable PIE when possible (for Ubuntu 16.10 toolchain)
-ifneq ($(shell $(CC) -dumpspecs 2>/dev/null | grep -e '[^f]no-pie'),)
-CFLAGS += -fno-pie -no-pie
-endif
-ifneq ($(shell $(CC) -dumpspecs 2>/dev/null | grep -e '[^f]nopie'),)
-CFLAGS += -fno-pie -nopie
-endif
-
-xv6.img: bootblock kernel
-	dd if=/dev/zero of=xv6.img count=10000                # 複製前 10000 bytes 到 xv6.img
-	dd if=bootblock of=xv6.img conv=notrunc               # 複製啟動區塊 bootblock 到 xv6.img
-	dd if=kernel of=xv6.img seek=1 conv=notrunc           # 複製核心 kernel 到 xv6.img
+xv6.img: bootblock kernel fs.img
+	dd if=/dev/zero of=xv6.img count=10000
+	dd if=bootblock of=xv6.img conv=notrunc
+	dd if=kernel of=xv6.img seek=1 conv=notrunc
 
 xv6memfs.img: bootblock kernelmemfs
-	dd if=/dev/zero of=xv6memfs.img count=10000           # 複製前 10000 bytes 到 xv6memfs.img
-	dd if=bootblock of=xv6memfs.img conv=notrunc          # 複製啟動區塊 bootblock 到 xv6memfs.img
-	dd if=kernelmemfs of=xv6memfs.img seek=1 conv=notrunc # 複製核心 kernelmemfs 到 xv6memfs.img
+	dd if=/dev/zero of=xv6memfs.img count=10000
+	dd if=bootblock of=xv6memfs.img conv=notrunc
+	dd if=kernelmemfs of=xv6memfs.img seek=1 conv=notrunc
 
-bootblock: bootasm.S bootmain.c                         # 啟動區塊
+bootblock: bootasm.S bootmain.c
 	$(CC) $(CFLAGS) -fno-pic -O -nostdinc -I. -c bootmain.c
 	$(CC) $(CFLAGS) -fno-pic -nostdinc -I. -c bootasm.S
 	$(LD) $(LDFLAGS) -N -e start -Ttext 0x7C00 -o bootblock.o bootasm.o bootmain.o
@@ -108,7 +99,7 @@ bootblock: bootasm.S bootmain.c                         # 啟動區塊
 	$(OBJCOPY) -S -O binary -j .text bootblock.o bootblock
 	./sign.pl bootblock
 
-entryother: entryother.S                                # 其他處理器的啟動程式
+entryother: entryother.S
 	$(CC) $(CFLAGS) -fno-pic -nostdinc -I. -c entryother.S
 	$(LD) $(LDFLAGS) -N -e start -Ttext 0x7000 -o bootblockother.o entryother.o
 	$(OBJCOPY) -S -O binary -j .text bootblockother.o entryother
@@ -120,8 +111,8 @@ initcode: initcode.S
 	$(OBJCOPY) -S -O binary initcode.out initcode
 	$(OBJDUMP) -S initcode.o > initcode.asm
 
-kernel: $(OBJS) entry.o entryother initcode kernel.ld   # 核心 kernel
-	$(LD) $(LDFLAGS) -T kernel.ld -o kernel entry.o $(OBJS) -b binary initcode entryother   # -b 之後以二進位方式連結進來?? 
+kernel: $(OBJS) entry.o entryother initcode kernel.ld
+	$(LD) $(LDFLAGS) -T kernel.ld -o kernel entry.o $(OBJS) -b binary initcode entryother
 	$(OBJDUMP) -S kernel > kernel.asm
 	$(OBJDUMP) -t kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > kernel.sym
 
@@ -141,7 +132,7 @@ tags: $(OBJS) entryother.S _init
 	etags *.S *.c
 
 vectors.S: vectors.pl
-	./vectors.pl > vectors.S
+	perl vectors.pl > vectors.S
 
 ULIB = ulib.o usys.o printf.o umalloc.o
 
@@ -155,6 +146,10 @@ _forktest: forktest.o $(ULIB)
 	# in order to be able to max out the proc table.
 	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o _forktest forktest.o ulib.o usys.o
 	$(OBJDUMP) -S _forktest > forktest.asm
+
+_uthread: uthread.o uthread_switch.o
+	    $(LD) $(LDFLAGS) -N -e main -Ttext 0 -o _uthread uthread.o uthread_switch.o $(ULIB)
+		    $(OBJDUMP) -S _uthread > uthread.asm
 
 mkfs: mkfs.c fs.h
 	gcc -Werror -Wall -o mkfs mkfs.c
@@ -181,6 +176,10 @@ UPROGS=\
 	_usertests\
 	_wc\
 	_zombie\
+	_date\
+	_alarm\
+	_uthread\
+	_big\
 
 fs.img: mkfs README $(UPROGS)
 	./mkfs fs.img README $(UPROGS)
@@ -190,11 +189,11 @@ fs.img: mkfs README $(UPROGS)
 clean: 
 	rm -f *.tex *.dvi *.idx *.aux *.log *.ind *.ilg \
 	*.o *.d *.asm *.sym vectors.S bootblock entryother \
-	initcode initcode.out kernel xv6.img fs.img kernelmemfs \
-	xv6memfs.img mkfs .gdbinit \
+	initcode initcode.out kernel xv6.img fs.img kernelmemfs mkfs \
+	.gdbinit \
 	$(UPROGS)
 
-# make a printout    # 列印有行號的程式碼 PDF
+# make a printout
 FILES = $(shell grep -v '^\#' runoff.list)
 PRINT = runoff.list runoff.spec README toc.hdr toc.ftr $(FILES)
 
@@ -206,7 +205,7 @@ print: xv6.pdf
 
 # run in emulators
 
-bochs : fs.img xv6.img  # 使用 bochs 執行。
+bochs : fs.img xv6.img
 	if [ ! -e .bochsrc ]; then ln -s dot-bochsrc .bochsrc; fi
 	bochs -q
 
@@ -217,27 +216,27 @@ QEMUGDB = $(shell if $(QEMU) -help | grep -q '^-gdb'; \
 	then echo "-gdb tcp::$(GDBPORT)"; \
 	else echo "-s -p $(GDBPORT)"; fi)
 ifndef CPUS
-CPUS := 2
+CPUS := 1
 endif
-QEMUOPTS = -drive file=fs.img,index=1,media=disk,format=raw -drive file=xv6.img,index=0,media=disk,format=raw -smp $(CPUS) -m 512 $(QEMUEXTRA)
+QEMUOPTS = -hdb fs.img xv6.img -smp $(CPUS) -m 512 $(QEMUEXTRA)
 
-qemu: fs.img xv6.img      # 使用 qemu 執行
+qemu: fs.img xv6.img
 	$(QEMU) -serial mon:stdio $(QEMUOPTS)
 
-qemu-memfs: xv6memfs.img  # xv6memfs.img 和 xv6.img 有何不同呢?
-	$(QEMU) -drive file=xv6memfs.img,index=0,media=disk,format=raw -smp $(CPUS) -m 256
+qemu-memfs: xv6memfs.img
+	$(QEMU) xv6memfs.img -smp $(CPUS) -m 256
 
-qemu-nox: fs.img xv6.img  # 使用 qemu 執行，無視窗介面的 Linux 使用這版。(例如 ubuntu 2018 server)
+qemu-nox: fs.img xv6.img
 	$(QEMU) -nographic $(QEMUOPTS)
 
-.gdbinit: .gdbinit.tmpl   # 設定 gdb
+.gdbinit: .gdbinit.tmpl
 	sed "s/localhost:1234/localhost:$(GDBPORT)/" < $^ > $@
 
-qemu-gdb: fs.img xv6.img .gdbinit # qemu 版且有 gdb
+qemu-gdb: fs.img xv6.img .gdbinit
 	@echo "*** Now run 'gdb'." 1>&2
 	$(QEMU) -serial mon:stdio $(QEMUOPTS) -S $(QEMUGDB)
 
-qemu-nox-gdb: fs.img xv6.img .gdbinit # qemu-nox 版且有 gdb
+qemu-nox-gdb: fs.img xv6.img .gdbinit
 	@echo "*** Now run 'gdb'." 1>&2
 	$(QEMU) -nographic $(QEMUOPTS) -S $(QEMUGDB)
 
@@ -281,6 +280,6 @@ tar:
 	rm -rf /tmp/xv6
 	mkdir -p /tmp/xv6
 	cp dist/* dist/.gdbinit.tmpl /tmp/xv6
-	(cd /tmp; tar cf - xv6) | gzip >xv6-rev10.tar.gz  # the next one will be 10 (9/17)
+	(cd /tmp; tar cf - xv6) | gzip >xv6-rev9.tar.gz  # the next one will be 9 (6/27/15)
 
 .PHONY: dist-test dist
