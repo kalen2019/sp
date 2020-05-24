@@ -3,6 +3,21 @@
 // Mostly argument checking, since we don't trust
 // user code, and calls into file.c and fs.c.
 //
+/*
+### 代码：系统调用
+
+有了底层的这些函数，大多数的系统调用的实现都是很简单的（参见 [sysfile.c] ）。
+还有少数几个调用值得一说。
+
+函数 `sys_link` 和`sys_unlink` 修改目录文件，可能会创建或者移除对 i 节点的
+引用。它们是使用会话的另一个佳例。`sys_link`（5513）最开始获取自己的参数 
+`old` 和 `new` 两个字符串。假设 `old` 是存在的并且不是一个目录文件（5520-5530），
+`sys_link` 增加它的 `ip->nlink` 计数。然后 `sys_link` 调用 `nameiparent(new)`
+ 来寻找上级目录和最终的目录元素（5536），并且创建一个目录项指向`old`的 i 节点
+ （5539）。`new` 的上级目录必须和已有 `old` 的 i 节点在同一个设备上；i 节点号
+ 只在同一个磁盘上有意义。如果这样的错误发生了，`sys_link`必须回溯并且还原引用计数。
+*/
+
 
 #include "types.h"
 #include "defs.h"
@@ -114,6 +129,22 @@ sys_fstat(void)
   return filestat(f, st);
 }
 
+/*
+`sys_link` 为一个已有的 i 节点创建一个新的名字。而函数 `create`（5657）为一个
+新的 i 节点创建新名字。它是三个文件创建系统调用的综合：用 `O_CREATE` 方式 
+`open`一个文件创建一个新的普通文件，`mkdir` 创建一个新的目录文件，`mkdev` 
+创建一个新的设备文件。就像`sys_link`一样，`create` 调用 `nameiparent` 
+获取上级目录的 i 节点。然后调用 `dirlookup` 来检查同名文件是否已经存在（5667）。
+如果的确存在，`create`的行为就由它服务的系统调用所决定，`open` 和 `mkdir` 
+以及 `mkdev` 的语义是不同的。 如果是 `open`（`type==T_FILE`）调用的 `create` 
+并且按指定文件名找到的文件是一个普通文件，那么就认为打开成功，因此 `create` 中
+也认为是成功。在其他情况下，这就是一个错误（5672-5673）。如果文件名并不存在，
+`create` 就会用 `ialloc`（5676）分配一个新的 i 节点。如果新的 i 节点是一个目录，
+`create` 就会初始化 `.` 和 `..` 两个目录项。最后所有的数据都初始化妥当了，
+`create` 就可以把它连接到它的上级目录（5689）。`create`，正如 `sys_link` 
+一样，同时拥有两个 i 节点锁：`ip` 和 `dp` 。这不可能导致死锁，因为 i 节点 `ip` 
+是刚被分配的：系统中没有其他进程会持有 `ip` 的锁并且尝试锁 `dp`。
+*/
 // Create the path new as a link to the same inode as old.
 int
 sys_link(void)
@@ -282,6 +313,16 @@ create(char *path, short type, short major, short minor)
   return ip;
 }
 
+/*
+使用 `create`，就能轻易地实现 `sys_open` 和 `sys_mkdir`，以及 `sys_mknod`。
+`sys_open` 是最复杂的，创建一个新文件只是他能做的很少一部分事。如果 `open` 
+以 `O_CREATE` 调用，它就会调用 `create`（5712）。否则，它就会调用 `namei`（5717）。
+`create` 会返回一个带锁的 i 节点，但是 `namei` 并不会，所以 `sys_open` 必须
+要自己锁上这个 i 节点。这样提供了一个合适的地方来检查目录只被打开用于读，而不是写。
+总之我们获得了一个 i 节点（不管是用 `create` 还是用 `namei`)，`sys_open` 分配了
+一个文件和文件描述符（5726），接着填充了这个文件（5734-5738）。我们要记住没有其他
+进程能够访问初始化尚未完成的文件，因为他只存在于当前进程的文件表中。
+*/
 int
 sys_open(void)
 {
@@ -419,6 +460,12 @@ sys_exec(void)
   return exec(path, argv);
 }
 
+/*
+第五章研究了管道的实现，在那时我们甚至还没有一个文件系统。函数 `sys_pipe` 
+通过管道对的方式把管道的实现和文件系统连接来。它的参数是一个指向可装入两个
+整数的数组指针，这个数组将用于记录两个新的文件描述符。然后它分配管道，将
+新的文件描述符存入这个数组中。
+*/
 int
 sys_pipe(void)
 {

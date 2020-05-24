@@ -1,6 +1,14 @@
 // The local APIC manages internal (non-I/O) interrupts.
 // See Chapter 8 & Appendix C of Intel processor manual volume 3.
+/*
+时钟芯片是在 LAPIC 中的，所以每一个处理器可以独立地接收时钟中断。xv6 在 lapicinit（6651）中设置它。
+关键的一行代码是 timer（6664）中的代码，这行代码告诉 LAPIC 周期性地在 IRQ_TIMER（也就是 IRQ 0) 
+产生中断。第 6693 行打开 CPU 的 LAPIC 的中断，这使得 LAPIC 能够将中断传递给本地处理器。
 
+处理器可以通过设置 eflags 寄存器中的 IF 位来控制自己是否想要收到中断。指令 cli 通过清除 IF 位来屏蔽中断，
+而 sti 又打开一个中断。xv6 在启动主 cpu（8412）和其他 cpu（1126）时屏蔽中断。每个处理器的调度器打开中断
+（2464）。为了控制一些特殊的代码片段不被中断，xv6 在进入这些代码片段之前关中断（例如 switchuvm（1773））。
+*/
 #include "param.h"
 #include "types.h"
 #include "defs.h"

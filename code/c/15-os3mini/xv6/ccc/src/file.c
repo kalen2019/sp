@@ -10,6 +10,16 @@
 #include "sleeplock.h"
 #include "file.h"
 
+/*
+系统中所有的打开文件都存在于一个全局的文件表 `ftable` 中。这个文件表
+有一个分配文件的函数（`filealloc`），有一个重复引用文件的函数（`filedup`），
+释放对文件引用的函数（`fileclose`），读和写文件的函数（`fileread` 和 `filewrite` ）。
+
+前三个的形式我们已经很熟悉了。`Filealloc` (5225)扫描整个文件表来寻找一个
+没有被引用的文件（`file->ref == 0`)并且返回一个新的引用；`filedup` (5252)
+增加引用计数；`fileclose` (5264)减少引用计数。当一个文件的引用计数变为0
+的时候，`fileclose`就会释放掉当前的管道或者i 节点（根据文件类型的不同）。
+*/
 struct devsw devsw[NDEV];
 struct {
   struct spinlock lock;
@@ -79,6 +89,17 @@ fileclose(struct file *f)
   }
 }
 
+/*
+函数`filestat`，`fileread`，`filewrite` 实现了对文件的 `stat`，`read`，`write` 
+操作。`filestat` (5302)只允许作用在 i 节点上，它通过调用 `stati` 实现。
+`fileread` 和 `filewrite` 检查这个操作被文件的打开属性所允许然后把执行让渡给 
+i 节点的实现或者管道的实现。如果这个文件代表的是一个 i 节点，`fileread`和 
+`filewrite` 就会把 i/o 偏移作为该操作的偏移并且往前移(5325-5326,5365-5366)。
+管道没有偏移这个概念。回顾一下 i 节点的函数需要调用者来处理锁(5305-5307, 
+5324-5327,5364-5378)。i 节点锁有一个方便的副作用那就是读写偏移会自动更新，
+所以同时对一个文件写并不会覆盖各自的文件，但是写的顺序是不被保证的，因此写的
+结果可能是交织的（在一个写操作的过程中插入了另一个写操作）。
+*/
 // Get metadata about file f.
 int
 filestat(struct file *f, struct stat *st)

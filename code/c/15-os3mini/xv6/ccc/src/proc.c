@@ -247,6 +247,26 @@ fork(void) // 分叉行程
 // Exit the current process.  Does not return.
 // An exited process remains in the zombie state
 // until its parent calls wait() to find out it exited.
+/*
+exit 首先要求获得 ptable.lock 然后唤醒当前进程的父进程（2376）。
+这一步似乎为时过早，但由于 exit 这时还没有把当前进程标记为 ZOMBIE，
+所以这样并不会出错：即使父进程已经是 RUNNABLE 的了，但在 exit 调用
+ sched 以释放 ptable.lock 之前，wait 是无法运行其中的循环的。
+ 所以说只有在子进程被标记为 ZOMBIE(2388)之后， wait 才可能找到要退出
+ 的子进程。在退出并重新调度之前，exit 会把所有子进程交给 initproc（2378-2385）。
+ 最后，exit 调用 sched 来让出 CPU。
+
+ 退出进程的父进程本来是通过调用 wait（2439）处于睡眠状态中，不过现在
+ 它就可以被调度器调度了。对 sleep 的调用返回时仍持有 ptable.lock ；
+ wait 接着会重新查看进程表并找到 state == ZOMBIE（2382）的已退出子进程。
+ 它会记录该子进程的 pid 然后清理其 struct proc，释放相关的内存空间（2418-2426）。
+
+子进程在 exit 时已经做好了大部分的清理工作，但父进程一定要为其释放 
+p->kstack 和 p->pgdir；当子进程运行 exit 时，它正在利用 p->kstack 
+分配到的栈以及 p->pgdir 对应的页表。所以这两者只能在子进程结束运行后，
+通过调用 sched 中的 swtch 被清理。这就是为什么调度器要运行在自己单独的栈上，
+而不能运行在调用 sched 的线程的栈上。
+*/
 void
 exit(void) // 離開行程
 {
@@ -292,6 +312,19 @@ exit(void) // 離開行程
 
 // Wait for a child process to exit and return its pid.
 // Return -1 if this process has no children.
+/*
+sleep 和 wakeup 可以在很多需要等待一个可检查状态的情况中使用。如我们在第0章中所见，
+父进程可以调用 wait 来等待一个子进程退出。在 xv6 中，当一个子进程要退出时它并不是
+直接死掉，而是将状态转变为 ZOMBIE，然后当父进程调用 wait 时才能发现子进程可以退出了。
+所以父进程要负责释放退出的子进程相关的内存空间，并修改对应的 struct proc 以便重用。
+每个进程结构体都会在 p->parent 中保存指向其父进程的指针。如果父进程在子进程之前
+退出了，初始进程 init 会接收其子进程并等待它们退出。我们必须这样做以保证可以为退出
+的进程做好子进程的清理工作。另外，所有的进程结构都是被 ptable.lock 保护的。
+
+wait 首先要求获得 ptable.lock，然后查看进程表中是否有子进程，如果找到了子进程，
+并且没有一个子进程已经退出，那么就调用 sleep 等待其中一个子进程退出（2439），
+然后不断循环。注意，这里 sleep 中释放的锁是 ptable.lock，也就是我们之前提到过的特殊情况。
+*/
 int
 wait(void) // 等待子行程結束
 {
@@ -342,19 +375,65 @@ wait(void) // 等待子行程結束
 //  - swtch to start running that process
 //  - eventually that process transfers control
 //      via swtch back to the scheduler.
-// 
-// scheduler 会找到一个 p->state 为 RUNNABLE 的进程 initproc，
-// 然后将 per-cpu 的变量 proc 指向该进程，接着调用 switchuvm 通知硬件开始使用目标进程的页表。
-// 注意，由于 setupkvm 使得所有的进程的页表都有一份相同的映射，指向内核的代码和数据，
-// 所以当内核运行时我们改变页表是没有问题的。switchuvm 同时还设置好任务状态段 SEG_TSS，
-// 让硬件在进程的内核栈中执行系统调用与中断。我们将在第3章研究任务状态段。
-// scheduler 接着把进程的 p->state 设置为 RUNNING，调用 swtch，
-// 切换上下文到目标进程的内核线程中。swtch 会保存当前的寄存器，
-// 并把目标内核线程中保存的寄存器（proc->context）载入到 x86 的硬件寄存器中，
-// 其中也包括栈指针和指令指针。当前的上下文并非是进程的，而是一个特殊的 per-cpu 调度器的上下文。
-// 所以 scheduler 会让 swtch 把当前的硬件寄存器保存在 per-cpu 的存储（cpu->scheduler）中，
-// 而非进程的内核线程上下文中。我们将在第5章讨论 swtch 的细节。最后的 ret 指令从栈中弹出目标进程的 %eip，
-// 从而结束上下文切换工作。现在处理器就运行在进程 p 的内核栈上了。
+/*
+scheduler 会找到一个 p->state 为 RUNNABLE 的进程 initproc，
+然后将 per-cpu 的变量 proc 指向该进程，接着调用 switchuvm 通知硬件开始使用目标进程的页表。
+注意，由于 setupkvm 使得所有的进程的页表都有一份相同的映射，指向内核的代码和数据，
+所以当内核运行时我们改变页表是没有问题的。switchuvm 同时还设置好任务状态段 SEG_TSS，
+让硬件在进程的内核栈中执行系统调用与中断。我们将在第3章研究任务状态段。
+scheduler 接着把进程的 p->state 设置为 RUNNING，调用 swtch，
+切换上下文到目标进程的内核线程中。swtch 会保存当前的寄存器，
+并把目标内核线程中保存的寄存器（proc->context）载入到 x86 的硬件寄存器中，
+其中也包括栈指针和指令指针。当前的上下文并非是进程的，而是一个特殊的 per-cpu 调度器的上下文。
+所以 scheduler 会让 swtch 把当前的硬件寄存器保存在 per-cpu 的存储（cpu->scheduler）中，
+而非进程的内核线程上下文中。我们将在第5章讨论 swtch 的细节。最后的 ret 指令从栈中弹出目标进程的 %eip，
+从而结束上下文切换工作。现在处理器就运行在进程 p 的内核栈上了。
+*/
+/*
+scheduler（2458）运行了一个普通的循环：找到一个进程来运行，运行直到其停止，
+然后继续循环。scheduler 大部分时间里都持有 ptable.lock，但在每次外层循环中
+都要释放该锁（并显式地允许中断）。当 CPU 闲置（找不到 RUNNABLE 的进程）时
+这样做十分有必要。如果一个闲置的调度器一直持有锁，那么其他 CPU 就不可能执行
+上下文切换或任何和进程相关的系统调用了，也就更不可能将某个进程标记为 RUNNABLE 
+然后让闲置的调度器能够跳出循环了。而之所以周期性地允许中断，则是因为可能进程都在
+等待 I/O，从而找不到一个 RUNNABLE 的进程（例如 shell）；如果调度器一直不允许
+中断，I/O 就永远无法到达了。
+*/
+/*
+scheduler 不断循环寻找可运行，即 p->state == RUNNABLE 的进程。一旦它找到了这样的进程，
+就将 per-cpu 的当前进程变量 proc 设为该进程，用 switchuvm 切换到该进程的页表，标记该
+进程为 RUNNING，然后调用 swtch 切换到该进程中运行（2472-2478）。
+
+下面我们来从另一个层面研究这段调度代码。对于每个进程，调度维护了进程的一系列固定状态，
+并且保证当状态变化时必须持有锁 ptable.lock。第一个固定状态是，如果进程为 RUNNING 的，
+那么必须确保使用时钟中断的 yield 时，能够无误地切换到其他进程；这就意味着 CPU 寄存器
+必须保存着进程的寄存器值（这些寄存器值并非在 context 中），%cr3 必须指向进程的页表，
+%esp 则要指向进程的内核栈，这样 swtch 才能正确地向栈中压入寄存器值，另外 proc 必须
+指向进程的 proc[] 槽中。另一个固定状态是，如果进程是 RUNNABLE，必须保证调度器能够
+无误地调度执行该进程；这意味着 p->context 必须保存着进程的内核线程变量，并且没有任何
+ CPU 此时正在其内核栈上运行，没有任何 CPU 的 %cr3 寄存器指向进程的页表，也没有任何
+  CPU 的 proc 指向该进程。
+
+正是由于要坚持以上两个原则，所以 xv6 必须在一个线程中获得 ptable.lock（通常是在 yield 中），
+然后在另一个线程中释放这个锁（在调度器线程或者其他内核线程中）。如果一段代码想要将
+运行中进程的状态修改为 RUNNABLE，那么在恢复到固定状态中之前持有锁；最早的可以释放锁
+的时机是在 scheduler 停止使用该进程页表并清空 proc 时。类似地，如果 scheduler 想把一个
+可运行进程的状态修改为 RUNNING，在该进程的内核线程完全运行起来（swtch 之后，例如在 yield 中）
+之前必须持有锁。
+
+除此之外，ptable.lock 也保护了一些其他的状态：进程 ID 的分配，进程表槽的释放，exit 和 
+wait 之间的互动，保证对进程的唤醒不会被丢失等等。我们应该思考一下 ptable.lock 有哪些不同
+的功能可以分离，使之更为简洁高效。
+*/
+/*
+xv6 所实现的调度算法非常朴素，仅仅是让每个进程轮流执行。这种算法被称作轮转法（round robin）。
+真正的操作系统使用了更为复杂的算法，例如，让每个进程都有优先级。主要思想是优先处理高优先级的
+可运行进程。但是由于要权衡多项指标，例如要保证公平性和高的吞吐量，调度算法往往很快变得复杂起来。
+另外，复杂的调度算法还会无意中导致像*优先级倒转（priority inversion）和护航（convoy）*这样
+的现象。优先级倒转是指当高优先级进程和低优先级进程共享一个锁时，如果锁已经被低优先级进程获得了，
+高优先级进程就无法运行了。护航则是指当很多高优先级进程等待一个持有锁的低优先级进程的情况，
+护航一旦发生，则可能持续很久。如果要避免这些问题，就必须在复杂的调度器中设计更多的机制。
+*/
 void
 scheduler(void) // 創建某 cpu 的排程器
 {
@@ -398,6 +477,33 @@ scheduler(void) // 創建某 cpu 的排程器
 // be proc->intena and proc->ncli, but that would
 // break in the few places where a lock is held but
 // there's no process.
+/*
+代码：调度
+上一节中我们查看了 swtch 的底层细节；现在让我们将 swtch 看做一个既有的功能，
+来研究从进程到调度器然后再回到进程的切换过程中的一些约定。进程想要让出 CPU 
+必须要获得进程表的锁 ptable.lock，并释放其拥有的其他锁，修改自己的状态
+（proc->state），然后调用 sched。yield（2522）和 sleep exit 都遵循了这个
+约定，我们稍后将会详细研究。sched 检查了两次状态（2507-2512），这里的状态表明
+由于进程此时持有锁，所以 CPU 应该是在中断关闭的情况下运行的。最后，sched 调用
+ swtch 把当前上下文保存在 proc->context 中然后切换到调度器上下文即 cpu->scheduler
+  中。swtch 返回到调度器栈中，就像是调度器调用的 swtch 返回了一样（2478）。
+  调度器继续其 for 循环，找到一个进程来运行，切换到该进程，然后继续轮转。
+
+我们看到，在对 swtch 的调用的整个过程中，xv6 都持有锁 ptable.lock：
+swtch 的调用者必须持有该锁，并将锁的控制权转移给切换代码。锁的这种使用方式
+很少见，通常来说，持有锁的线程应该负责释放该锁，这样更容易让我们理解其正确性。
+但对于上下文切换来说，我们必须使用这种方式，因为 ptable.lock 会保证进程的 
+state 和 context 在运行 swtch 时保持不变。如果在 swtch 中没有持有 ptable.lock，
+可能引发这样的问题：在 yield 将某个进程状态设置为 RUNNABLE 之后，但又是在 swtch 
+让它停止在其内核栈上运行之前，有另一个 CPU 要运行该进程。其结果将是两个 CPU 都
+运行在同一个栈上，这显然是不该发生的。
+
+内核线程只可能在 sched 中让出处理器，在 scheduler 中切换回对应的地方，当然这里
+ scheduler 也是通过 sched 切换到进程中的。所以，如果要写出 xv6 中切换线程的代码
+ 行号，我们会发现其执行规律是（2478），（2516），（2478），（2516），不断循环。
+ 以这种形式在两个线程之间切换的过程有时被称作共行程序（coroutines）；在此例中，
+ sched 和 scheduler 就是彼此的共行程序。
+*/
 void
 sched(void) // 安排下一個行程
 {
@@ -450,6 +556,39 @@ forkret(void)
 
 // Atomically release lock and sleep on chan.
 // Reacquires lock when awakened.
+/*
+让我们来考虑一对调用 sleep 和 wakeup，其工作方式如下。sleep(chan) 让进程
+在任意的 chan 上休眠，称之为等待队列（wait channel）。sleep 让调用进程休眠，
+释放所占 CPU。wakeup(chan) 则唤醒在 chan 上休眠的所有进程，让他们的 sleep 
+调用返回。如果没有进程在 chan 上等待唤醒，wakeup 就什么也不做。
+
+接下来让我们看看 xv6 中 sleep 和 wakeup 的实现。总体思路是希望 sleep 将当前
+进程转化为 SLEEPING 状态并调用 sched 以释放 CPU，而 wakeup 则寻找一个睡眠状态
+的进程并把它标记为 RUNNABLE。
+
+sleep 首先会进行几个必要的检查：必须存在当前进程（2555）并且 sleep 必须持有锁
+（2558-2559）。接着 sleep 要求持有 ptable.lock（2568）。于是该进程就会同时
+持有锁 ptable.lock 和 lk 了。调用者（例如 recv）是必须持有 lk 的，这样可以保证
+其他进程（例如一个正在运行的 send）无法调用 wakeup(chan)。而如今 sleep 已经持有了
+ ptable.lock，那么它现在就能安全地释放 lk 了：这样即使别的进程调用了 wakeup(chan)，
+ wakeup 也不可能在没有持有 ptable.lock 的情况下运行，所以 wakeup 必须等待 sleep 
+ 让进程睡眠后才能运行。这样一来，wakeup 就不会错过 sleep 了。
+*/
+/*
+这里有一个复杂一点的情况：即 lk 就是 ptable.lock 的时候，这样 sleep 在要求持有 
+ptable.lock 然后又把它作为 lk 释放的时候会出现死锁。这种情况下，sleep 就会直接
+跳过这两个步骤（2567）。例如，当 wait（2403）持有 &ptable.lock 时调用 sleep。
+
+现在仅有该进程的 sleep 持有 ptable.lock，于是它通过记录睡眠队列，改变进程状态，
+调用 sched（2573-2575）让进程进入睡眠。
+
+稍后，进程会调用 wakeup(chan)。wakeup（2603）要求获得 ptable.lock 并调用 
+wakeup1，其中，实际工作是由 wakeup1 完成的。对于 wakeup 来说持有 ptable.lock 
+也是很重要的，因为它也要修改进程的状态并且要保证 sleep 和 wakeup 不会错过彼此。
+而之所以要单独实现一个 wakeup1，是因为有时调度器会在持有 ptable.lock 的情况下
+唤醒进程，稍后我们会看到这样的例子。当 wakeup 找到了对应 chan 中处于 SLEEPING 
+的进程时，它将进程状态修改为 RUNNABLE。于是下一次调度器在运行时，就可以调度该进程了。
+*/
 void
 sleep(void *chan, struct spinlock *lk) // 進入睡眠狀態
 {
@@ -490,6 +629,25 @@ sleep(void *chan, struct spinlock *lk) // 進入睡眠狀態
 //PAGEBREAK!
 // Wake up all processes sleeping on chan. // 喚醒 chan 上的所有行程
 // The ptable lock must be held.           // 必須鎖定 ptable
+/*
+wackup 必须在有一个监视唤醒条件的锁的时候才能被调用: 在上面的例子中这个锁就是
+ q->lock。至于为什么睡眠中的进程不会错过唤醒，则是因为从 sleep 检查进程状态之前，
+ 到进程进入睡眠之后，sleep 都持有进程状态的锁或者 ptable.lock 或者是两者兼有。
+ 由于 wakeup 必须在持有这两个锁的时候运行，所以它必须在 sleep 检查状态之前和
+ 一个进程已经完全进入睡眠后才能执行。
+
+有些情况下可能有多个进程在同一队列中睡眠；例如，有多个进程想要从管道中读取数据时。
+那么单独一个 wakeup 的调用就能将它们全部唤醒。他们的其中一个会首先运行并要求获得 
+sleep 被调用时所持的锁，然后读取管道中的任何数据。而对于其他进程来说，即使被唤醒了，
+它们也读不到任何数据，所以唤醒它们其实是徒劳的，它们还得接着睡。正是由于这个原因，
+我们在一个检查状态的循环中不断调用 sleep。
+
+sleep 和 wakeup 的调用者可以使用任何方便使用的数字作为队列号码；而实际上，xv6 
+通常使用内核中和等待相关的数据结构的地址，譬如磁盘缓冲区。即使两组 sleep/wakeup 
+使用了相同的队列号码，也是无妨的：对于那些无用的唤醒，它们会通过不断检查状态忽略之。
+sleep/wakeup 的优点主要是其轻量级（不需另定义一个结构来作为睡眠队列），并且提供了
+一层抽象（调用者不需要了解与之交互的是哪一个进程）。
+*/
 static void
 wakeup1(void *chan)
 {
@@ -501,6 +659,28 @@ wakeup1(void *chan)
 }
 
 // Wake up all processes sleeping on chan. // 喚醒 chan 上的所有行程
+/*
+sleep 和 wakeup 是非常普通但有效的同步方法，当然还有很多其他的同步方法。
+同步要解决的第一个问题是本章开始我们看到的“丢失的唤醒”问题。原始的 Unix 
+内核的 sleep 只是简单地屏蔽中断，由于 Unix 只在单处理器上运行，所以这样已经足够了。
+但是由于 xv6 要在多处理器上运行，所以它给 sleep 增加了一个现实的锁。FreeBSD 的 
+msleep 也使用了同样的方法。Plan 9 的 sleep 使用了一个回调函数，并在其返回到 sleep 
+中之前持有调度用的锁；这个函数对睡眠状态作了最后检查，以避免丢失的唤醒。Linux 内核的 
+sleep 用一个显式的进程队列代替 xv6 中的等待队列（wait channel）；而该队列本身内部还有锁。
+*/
+/*
+在 wakeup 中遍历整个进程表来寻找对应 chan 的进程是非常低效的。更好的办法是用
+另一个结构体代替 sleep 和 wakeup 中的 chan，该结构体中维护了一个睡眠进程的链表。
+Plan 9 的 sleep 和 wakeup 把该结构体称为*集合点（rendezvous point）*或者 Rendez。
+许多线程库都把相同的一个结构体作为一个状态变量；如果是这样的话，sleep 和 wakeup 操
+作则被称为 wait 和 signal。所有此类机制都有同一个思想：使得睡眠状态可以被某种执行
+原子操作的锁保护。
+
+在 wakeup 的实现中，它唤醒了特定队列中的所有进程，而有可能很多进程都在同一个队列中
+等待被唤醒。操作系统会调度这里的所有进程，它们会互相竞争以检查其睡眠状态。这样的一堆
+进程被称作惊群（thundering herd），而我们最好是避免这种情况的发生。大多数的状态变量
+都有两种不同的 wakeup，一种唤醒一个进程，即 signal；另一种唤醒所有进程，即 broadcast。
+*/
 void
 wakeup(void *chan)
 {
@@ -512,6 +692,23 @@ wakeup(void *chan)
 // Kill the process with the given pid. // 殺死刪除 pid 的行程
 // Process won't exit until it returns
 // to user space (see trap in trap.c).
+/*
+exit 让一个应用程序可以自我终结；kill（2625）则让一个应用程序可以终结其他进程。
+在实现 kill 时有两个困难：1）被终结的进程可能正在另一个 CPU 上运行，所以它必须
+在被终结之前把 CPU 让给调度器；2）被终结的进程可能正在 sleep 中，并持有内核资源。
+kill 很轻松地解决了这两个难题：它在进程表中设置被终结的进程的 p->killed，如果
+这个进程在睡眠中则唤醒之。如果被终结的进程正在另一个处理器上运行，它总会通过
+系统调用或者中断（例如时钟中断）进入内核。当它离开内核时，trap 会检查它的 p->killed，
+如果被设置了，该进程就会调用 exit，终结自己。
+
+如果被终结的进程在睡眠中，调用 wakeup 会让被终结的进程开始运行并从 sleep 中返回。
+此举有一些隐患，因为进程可能是在它等待的状态尚为假的时候就从 sleep 中返回了。
+所以 xv6 谨慎地在调用 sleep 时使用了 while 循环，检查 p->killed 是否被设置了，
+若是，则返回到调用者。调用者也必须再次检查 p->killed 是否被设置，若是，返回到
+再上一级调用者，依此下去。最后进程的栈展开（unwind）到了 trap，trap 若检查到 
+p->killed 被设置了，则调用 exit 终结自己。我们已经在管道的实现中（6087）看到了
+在 sleep 外的 while 循环中检查 p->killed。
+*/
 int
 kill(int pid)
 {

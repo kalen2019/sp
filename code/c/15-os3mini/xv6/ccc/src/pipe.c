@@ -1,3 +1,12 @@
+/*
+每个管道由一个结构体 struct pipe 表示，其中有一个锁 lock和内存缓冲区。
+其中的域 nread 和 nwrite 表示从缓冲区读出和写入的字节数。pipe 对缓冲区
+做了包装，使得虽然计数器继续增长，但实际上在 buf[PIPESIZE - 1] 之后写入
+的字节存放在 buf[0]。这样就让我们可以区分一个满的缓冲区
+（nwrite == nread + PIPESIZE）和一个空的缓冲区（nwrite == nread），
+但这也意味着我们必须使用 buf[nread % PIPESIZE] 而不是 buf[nread] 来
+读出/写入数据。现在假设 piperead 和 pipewrite 分别在两个 CPU 上连续执行。
+*/
 #include "types.h"
 #include "defs.h"
 #include "param.h"
@@ -75,6 +84,14 @@ pipeclose(struct pipe *p, int writable)
 }
 
 //PAGEBREAK: 40
+/*
+pipewrite（6080）首先请求获得管道的锁，以保护计数器、数据以及相关不变量。
+piperead（6101）接着也请求获得锁，结果当然是无法获得。于是它停在了 acquire（1474）
+上等待锁的释放。与此同时，pipewrite 在循环中依次写入 addr[0], addr[1], ..., addr[n-1] 
+并添加到管道中（6094）。在此循环中，缓冲区可能被写满（6086），这时 pipewrite 会调用 
+wakeup 通知睡眠中的读者缓冲区中有数据可读，然后使得在 &p->nwrite 队列中睡眠的读者从缓冲区
+中读出数据。注意，sleep 在让 pipewrite 的进程进入睡眠时还会释放 p->lock。
+*/
 int
 pipewrite(struct pipe *p, char *addr, int n)
 {
@@ -97,6 +114,15 @@ pipewrite(struct pipe *p, char *addr, int n)
   return n;
 }
 
+/*
+现在 p->lock 被释放了，piperead 尝试获得该锁然后开始执行：此时它会检查到
+ p->nread != p->nwrite（6106）（正是在 nwrite == nread + PIPESIZE （6086）
+ 的时候 pipewrite 进入了睡眠），于是 piperead 跳出 for 循环，将数据从管道
+ 中拷贝出来（6113-6117），然后将 nread 增加读取字节数。现在缓冲区又多出了
+ 很多可写的字节，所以 piperead 调用 wakeup（6118）唤醒睡眠中的写者，然后
+ 返回到调用者中。wakeup 会找到在 &p->nwrite 队列上睡眠的进程，正是该进程之前
+ 在运行 pipewrite 时由于缓冲区满而停止了。然后 wakeup 将该进程标记为 RUNNABLE。
+*/
 int
 piperead(struct pipe *p, char *addr, int n)
 {

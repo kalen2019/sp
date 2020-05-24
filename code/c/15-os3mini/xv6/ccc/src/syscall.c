@@ -14,6 +14,14 @@
 // to a saved program counter, and then the first argument.
 
 // Fetch the int at addr from the current process.
+/*
+argint 调用 fetchint 从用户内存地址读取值到 *ip。fetchint 可以简单地将这个地址直接
+转换成一个指针，因为用户和内核共享同一个页表，但是内核必须检验这个指针的确指向的是用户
+内存空间的一部分。内核已经设置好了页表来保证本进程无法访问它的私有地址以外的内存：如果
+一个用户尝试读或者写高于（包含）p->sz的地址，处理器会产生一个段中断，这个中断会杀死此进程，
+正如我们之前所见。但是现在，我们在内核态中执行，用户提供的任何地址都是有权访问的，因此
+必须要检查这个地址是在 p->sz 之下的。
+*/
 int
 fetchint(uint addr, int *ip)
 {
@@ -45,6 +53,14 @@ fetchstr(uint addr, char **pp)
   return -1;
 }
 
+/*
+如何获得系统调用的参数。工具函数 argint、argptr 和 argstr 获得第 n 个系统调用参数，
+他们分别用于获取整数，指针和字符串起始地址。argint 利用用户空间的 %esp 寄存器定位
+第 n 个参数：%esp 指向系统调用结束后的返回地址。参数就恰好在 %esp 之上（%esp+4）。
+因此第 n 个参数就在 %esp+4+4*n。
+
+
+*/
 // Fetch the nth 32-bit system call argument.
 int
 argint(int n, int *ip)
@@ -55,6 +71,13 @@ argint(int n, int *ip)
 // Fetch the nth word-sized system call argument as a pointer
 // to a block of memory of size bytes.  Check that the pointer
 // lies within the process address space.
+/*
+`argptr` 和 `argint` 的目标是相似的：它解析第 n 个系统调用参数。`argptr` 
+调用 `argint` 来把第 n 个参数当做是整数来获取，然后把这个整数看做指针，
+检查它的确指向的是用户地址空间。注意 `argptr` 的源码中有两次检查。首先，
+用户的栈指针在获取参数的时候被检查。然后这个获取到得参数作为用户指针又经过
+了一次检查。
+*/
 int
 argptr(int n, char **pp, int size)
 {
@@ -73,6 +96,10 @@ argptr(int n, char **pp, int size)
 // Check that the pointer is valid and the string is nul-terminated.
 // (There is no shared writable memory, so the string can't change
 // between this check and being used by the kernel.)
+/*
+`argstr` 是最后一个用于获取系统调用参数的函数。它将第 n 个系统调用参数解析为指针。
+它确保这个指针是一个 NUL 结尾的字符串并且整个完整的字符串都在用户地址空间中。
+*/
 int
 argstr(int n, char **pp)
 {
@@ -138,6 +165,10 @@ syscall 在 %eax 保存系统调用函数的返回值。当 trap 返回用户空
  cp->tf 中加载其值到寄存器中。因此，当 exec 返回时，它会返回系统调用处理函数
  返回的返回值（3381）。系统调用按照惯例会在发生错误的时候返回一个小于 0 的数，
  成功执行时返回正数。如果系统调用号是非法的，syscall 会打印错误并且返回 -1。
+
+系统调用的实现（例如，[sysproc.c] 和 [sysfile.c]）仅仅是封装而已：他们用 
+`argint`，`argptr` 和 `argstr` 来解析参数，然后调用真正的实现。在第一章，
+`sys_exec` 利用这些函数来获取参数。
 */
 void
 syscall(void)
