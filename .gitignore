@@ -82,24 +82,24 @@ build/Release
 node_modules
 
 # xv6
-*~
-_*
-*.o
-*.d
-*.asm
-*.sym
+# *~
+# _*
+# *.o
+# *.d
+# *.asm
+# *.sym
 # *.img
 # !fs.img
 # !xv6.img
-vectors.S
-bootblock
-entryother
-initcode
-initcode.out
-kernel
-kernelmemfs
-mkfs
-.gdbinit
+# vectors.S
+# bootblock
+# entryother
+# initcode
+# initcode.out
+# kernel
+# kernelmemfs
+# mkfs
+# .gdbinit
 
 # rust
 *.pdb
