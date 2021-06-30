@@ -88,13 +88,33 @@ void WHILE() {
   emit("goto L%d\n", whileBegin);
   emit("(L%d)\n", whileEnd);
 }
+void IF() {
+  int ifBegin = nextLabel();
+  int ifNext = nextLabel();
+  int ifEnd = nextLabel();
+  emit("(L%d)\n", ifBegin);  //開始標記
+  skip("if");               //略過
+  skip("(");
+  int e = E();              //處理括號內部
+  emit("if not T%d goto L%d\n", e, ifNext);
+  skip(")");
+  STMT();
+  emit("goto L%d\n", ifEnd);
+  emit("(L%d)\n", ifNext);
+  if (isNext("else")){
+    skip("else");
+    STMT();
+    emit("(L%d)\n",ifEnd);
+  }   //如果遇到要進入else的情況才執行
+  
+}
 
 // STMT = WHILE | BLOCK | ASSIGN
 void STMT() {
   if (isNext("while"))
     return WHILE();
-  // else if (isNext("if"))
-  //   IF();
+  else if (isNext("if"))
+    IF();
   else if (isNext("{"))
     BLOCK();
   else

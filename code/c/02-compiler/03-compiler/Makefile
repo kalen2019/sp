@@ -8,4 +8,4 @@ $(TARGET): lexer.c compiler.c main.c
 	$(CC) $(CFLAGS) $^ -o $@
 
 clean:
-	rm -f *.o *.exe
+	rm -f *.o *.exe $(TARGET)

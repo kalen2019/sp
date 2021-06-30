@@ -64,7 +64,7 @@ char *next(char *p) {
   return p;
 }
 
-void lex(char *fileName) {
+void lex(char *code) {
   char *p = code;
   while (1) {
     p = next(p);
@@ -79,7 +79,7 @@ void dump(char *strTable[], int top) {
 }
 
 int main(int argc, char * argv[]) {
-  readText(argv[1], code, sizeof(code));
+  readText(argv[1], code, sizeof(code)-1);
   puts(code);
   lex(code);
   dump(tokens, tokenTop);
