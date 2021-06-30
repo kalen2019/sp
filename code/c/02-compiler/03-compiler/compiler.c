@@ -44,10 +44,19 @@ int F() {
     next(); // (
     f = E();
     next(); // )
-  } else { // Number | Id
+  } 
+  else { // Number | Id
     f = nextTemp();
     char *item = next();
-    emit("t%d = %s\n", f, item);
+    if(isNext("++")){
+      next();
+      emit("%s = %s + 1\n", item, item); //分辨是++
+    }
+    else  if(isNext("--")){
+      next();
+      emit("%s = %s - 1\n", item, item); //分辨是--
+    }
+    else  emit("t%d = %s\n", f, item);
   }
   return f;
 }
@@ -55,7 +64,7 @@ int F() {
 // E = F (op E)*
 int E() {
   int i1 = F();
-  while (isNext("+ - * / & | ! < > =")) {
+  while (isNext("+ - * / & | ! < > = <= >= == !=")) {
     char *op = next();
     int i2 = E();
     int i = nextTemp();
@@ -108,6 +117,22 @@ void IF() {
   }   //如果遇到要進入else的情況才執行
   
 }
+void FOR(){
+  int forBegin = nextLabel();
+  int forEnd = nextLabel();
+  skip("for");
+  skip("(");
+  ASSIGN();
+  emit("(L%d)\n", forBegin);
+  int e = E();
+  emit("if not T%d goto L%d\n", e, forEnd);
+  skip(";");
+  F();
+  skip(")");
+  STMT();
+  emit("goto L%d\n", forBegin);
+  emit("(L%d)\n", forEnd);
+}
 
 // STMT = WHILE | BLOCK | ASSIGN
 void STMT() {
@@ -115,6 +140,8 @@ void STMT() {
     return WHILE();
   else if (isNext("if"))
     IF();
+  else if (isNext("for"))
+    FOR();
   else if (isNext("{"))
     BLOCK();
   else

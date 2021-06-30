@@ -3,7 +3,7 @@
 #define TMAX 10000000
 #define LMAX 100
 
-char *typeName[5] = {"Id", "Int", "Keyword", "Literal", "Char"};
+char *typeName[6] = {"Id", "Int", "Keyword", "Literal", "Char", "Op"};
 char code[TMAX], *p;
 char strTable[TMAX], *strTableEnd=strTable;
 char *tokens[TMAX], tokenTop=0, tokenIdx=0, token[LMAX];
@@ -25,7 +25,12 @@ char *scan() {
   } else if (isAlpha(*p) || *p == '_') { // 變數名稱或關鍵字
     while (isAlpha(*p) || isDigit(*p) || *p == '_') p++;
     type = Id;
-  } else { // 單一字元
+  } else if(strchr("+-*/%%&|<>!=", *p) >= 0){ 
+    char c = *p++;
+    if(*p == '=') p++; //+=,-=, ==, <=,>=, !=, ...
+    else if (strchr("+-&|", c) >= 0 && *p == c) p++; // ++,--,&&,||
+    type = Op;
+  } else {
     p++;
     type = Char;
   }

@@ -8,7 +8,7 @@
 #define TMAX 10000000
 #define SMAX 100000
 
-enum { Id, Int, Keyword, Literal, Char };
+enum { Id, Int, Keyword, Literal, Char, Op };
 
 extern char *typeName[];
 
