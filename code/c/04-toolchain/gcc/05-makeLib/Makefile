@@ -16,4 +16,4 @@ $(LIB): sum.o
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -f *.o *.a
+	rm -f *.o *.a *.exe $(TARGET)

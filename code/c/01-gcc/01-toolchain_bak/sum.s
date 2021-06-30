@@ -1,72 +1,65 @@
-	.section	__TEXT,__text,regular,pure_instructions
-	.macosx_version_min 10, 13
+	.file	"sum.c"
+	.text
 	.globl	_sum
-	.p2align	4, 0x90
-_sum:                                   ## @sum
+	.def	_sum;	.scl	2;	.type	32;	.endef
+_sum:
+LFB10:
 	.cfi_startproc
-## BB#0:
-	pushq	%rbp
-Lcfi0:
-	.cfi_def_cfa_offset 16
-Lcfi1:
-	.cfi_offset %rbp, -16
-	movq	%rsp, %rbp
-Lcfi2:
-	.cfi_def_cfa_register %rbp
-	movl	%edi, -4(%rbp)
-	movl	$0, -8(%rbp)
-	movl	$0, -12(%rbp)
-LBB0_1:                                 ## =>This Inner Loop Header: Depth=1
-	movl	-12(%rbp), %eax
-	cmpl	-4(%rbp), %eax
-	jg	LBB0_4
-## BB#2:                                ##   in Loop: Header=BB0_1 Depth=1
-	movl	-8(%rbp), %eax
-	addl	-12(%rbp), %eax
-	movl	%eax, -8(%rbp)
-## BB#3:                                ##   in Loop: Header=BB0_1 Depth=1
-	movl	-12(%rbp), %eax
-	addl	$1, %eax
-	movl	%eax, -12(%rbp)
-	jmp	LBB0_1
-LBB0_4:
-	movl	-8(%rbp), %eax
-	popq	%rbp
-	retq
+	pushl	%ebp
+	.cfi_def_cfa_offset 8
+	.cfi_offset 5, -8
+	movl	%esp, %ebp
+	.cfi_def_cfa_register 5
+	subl	$16, %esp
+	movl	$0, -4(%ebp)
+	movl	$0, -8(%ebp)
+	jmp	L2
+L3:
+	movl	-8(%ebp), %eax
+	addl	%eax, -4(%ebp)
+	addl	$1, -8(%ebp)
+L2:
+	movl	-8(%ebp), %eax
+	cmpl	8(%ebp), %eax
+	jle	L3
+	movl	-4(%ebp), %eax
+	leave
+	.cfi_restore 5
+	.cfi_def_cfa 4, 4
+	ret
 	.cfi_endproc
-
+LFE10:
+	.def	___main;	.scl	2;	.type	32;	.endef
+	.section .rdata,"dr"
+LC0:
+	.ascii "sum(10)=%d\12\0"
+	.text
 	.globl	_main
-	.p2align	4, 0x90
-_main:                                  ## @main
+	.def	_main;	.scl	2;	.type	32;	.endef
+_main:
+LFB11:
 	.cfi_startproc
-## BB#0:
-	pushq	%rbp
-Lcfi3:
-	.cfi_def_cfa_offset 16
-Lcfi4:
-	.cfi_offset %rbp, -16
-	movq	%rsp, %rbp
-Lcfi5:
-	.cfi_def_cfa_register %rbp
-	subq	$16, %rsp
-	movl	$10, %edi
-	callq	_sum
-	leaq	L_.str(%rip), %rdi
-	movl	%eax, -4(%rbp)
-	movl	-4(%rbp), %esi
-	movb	$0, %al
-	callq	_printf
-	xorl	%esi, %esi
-	movl	%eax, -8(%rbp)          ## 4-byte Spill
-	movl	%esi, %eax
-	addq	$16, %rsp
-	popq	%rbp
-	retq
+	pushl	%ebp
+	.cfi_def_cfa_offset 8
+	.cfi_offset 5, -8
+	movl	%esp, %ebp
+	.cfi_def_cfa_register 5
+	andl	$-16, %esp
+	subl	$32, %esp
+	call	___main
+	movl	$10, (%esp)
+	call	_sum
+	movl	%eax, 28(%esp)
+	movl	28(%esp), %eax
+	movl	%eax, 4(%esp)
+	movl	$LC0, (%esp)
+	call	_printf
+	movl	$0, %eax
+	leave
+	.cfi_restore 5
+	.cfi_def_cfa 4, 4
+	ret
 	.cfi_endproc
-
-	.section	__TEXT,__cstring,cstring_literals
-L_.str:                                 ## @.str
-	.asciz	"sum(10)=%d\n"
-
-
-.subsections_via_symbols
+LFE11:
+	.ident	"GCC: (MinGW.org GCC-6.3.0-1) 6.3.0"
+	.def	_printf;	.scl	2;	.type	32;	.endef

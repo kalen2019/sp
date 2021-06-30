@@ -8,4 +8,4 @@ $(TARGET): sum.c main.c
 	$(CC) $(CFLAGS) $^ -o $@
 
 clean:
-	rm -f *.o
+	rm -f *.o $(TARGET)
