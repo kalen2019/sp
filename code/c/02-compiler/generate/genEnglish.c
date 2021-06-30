@@ -1,4 +1,4 @@
-#include "rlib.c"
+#include "rlib.h"
 
 // === EBNF Grammar =====
 // S = NP VP

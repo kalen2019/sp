@@ -10,7 +10,8 @@ void F();
 // T=[0-9] | (E)
 
 int main(int argc, char * argv[]) {
-	E();
+	timeSeed();
+	//E();
 	int i;
 	for (i=0; i<10; i++) {
 		E();
